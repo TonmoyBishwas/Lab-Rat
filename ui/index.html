@@ -632,7 +632,7 @@
 <!-- Top bar -->
 <div id="topbar">
   <div class="topbar-left">
-    <div class="logo">Lab Rat AI<span>offline</span></div>
+    <div class="logo">Lab Rat AI</div>
     <div class="status-group">
       <div id="status-dot" class="checking"></div>
       <span id="status-label">Connecting</span>
@@ -765,11 +765,11 @@ async function loadSessionIntoChat(session) {
   history = session.messages;
   currentSessionId = session.id;
   for (const msg of history) {
-    const div = appendMessage(msg.role, msg.content);
+    const div = appendMessage(msg.role, msg.content, null, msg.reasoning);
     if (msg.role === 'assistant' && div) {
       const actions = div.querySelector('.msg-actions');
       if (actions) {
-        const answerText = parseThinking(msg.content).main || msg.content;
+        const answerText = msg.reasoning ? msg.content : (parseThinking(msg.content).main || msg.content);
         const btn = document.createElement('button');
         btn.className = 'copy-btn';
         btn.textContent = 'Copy';
@@ -957,12 +957,13 @@ async function streamResponse() {
   bodyEl.innerHTML = '<div class="thinking"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
 
   abortCtrl = new AbortController();
-  let raw = '';
-  let lastMain = '';
+  let contentRaw = '';
+  let reasoningRaw = '';
 
+  const cleanHistory = history.map(m => ({ role: m.role, content: m.content }));
   const messages = cfg.sysPrompt
-    ? [{ role: 'system', content: cfg.sysPrompt }, ...history]
-    : [...history];
+    ? [{ role: 'system', content: cfg.sysPrompt }, ...cleanHistory]
+    : cleanHistory;
 
   try {
     const res = await fetch(BASE() + '/v1/chat/completions', {
@@ -1000,30 +1001,45 @@ async function streamResponse() {
         if (data === '[DONE]') continue;
         try {
           const j = JSON.parse(data);
-          const delta = j.choices?.[0]?.delta?.content;
-          if (delta) {
-            raw += delta;
-            const parsed = parseThinking(raw);
+          const delta = j.choices?.[0]?.delta;
+          if (!delta) continue;
 
-            if (parsed.think) {
+          // Reasoning tokens arrive in a separate field (llama.cpp build 8914+)
+          if (delta.reasoning_content) {
+            reasoningRaw += delta.reasoning_content;
+            if (thinkEl.style.display === 'none') {
+              thinkEl.style.display = '';
+              thinkEl.open = true;
+              thinkEl.classList.add('streaming');
+            }
+            thinkBodyEl.textContent = reasoningRaw;
+            thinkBodyEl.scrollTop = thinkBodyEl.scrollHeight;
+          }
+
+          // Answer tokens
+          if (delta.content) {
+            // First answer token — reasoning is complete, collapse it
+            if (!contentRaw && reasoningRaw) {
+              thinkEl.classList.remove('streaming');
+              thinkEl.open = false;
+            }
+            contentRaw += delta.content;
+
+            // Fallback: some templates still emit inline <think> tags in content
+            const parsed = parseThinking(contentRaw);
+            if (parsed.think && !reasoningRaw) {
               if (thinkEl.style.display === 'none') {
                 thinkEl.style.display = '';
-                thinkEl.open = true;
-                thinkEl.classList.add('streaming');
               }
               thinkBodyEl.textContent = parsed.think;
-              thinkBodyEl.scrollTop = thinkBodyEl.scrollHeight;
               if (parsed.closed) {
                 thinkEl.classList.remove('streaming');
                 thinkEl.open = false;
               }
             }
-
-            if (parsed.main) {
-              bodyEl.innerHTML = renderMarkdown(parsed.main);
-              lastMain = parsed.main;
-            } else if (!parsed.closed) {
-              bodyEl.innerHTML = '<div class="thinking"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+            const answerText = (reasoningRaw || !parsed.think) ? contentRaw : parsed.main;
+            if (answerText) {
+              bodyEl.innerHTML = renderMarkdown(answerText);
             }
             scrollToBottom();
           }
@@ -1034,20 +1050,29 @@ async function streamResponse() {
     if (e.name !== 'AbortError') {
       bodyEl.innerHTML = `<span style="color:var(--red)">Error: ${escHtml(e.message)}</span>`;
     }
-    raw = raw || '[cancelled]';
   }
 
   thinkEl.classList.remove('streaming');
 
-  history.push({ role: 'assistant', content: raw });
+  // Resolve final answer: prefer pure content; fall back to stripping inline <think>
+  let finalAnswer = contentRaw;
+  if (!reasoningRaw && contentRaw) {
+    const parsed = parseThinking(contentRaw);
+    if (parsed.think) {
+      reasoningRaw = parsed.think;
+      finalAnswer = parsed.main;
+    }
+  }
+  if (!finalAnswer) finalAnswer = '[no response]';
+
+  history.push({ role: 'assistant', content: finalAnswer, reasoning: reasoningRaw });
   saveSession();
 
-  const answerText = lastMain || parseThinking(raw).main || raw;
   const actions = aiDiv.querySelector('.msg-actions');
   const btn = document.createElement('button');
   btn.className = 'copy-btn';
   btn.textContent = 'Copy';
-  btn.onclick = () => copyText(answerText, btn);
+  btn.onclick = () => copyText(finalAnswer, btn);
   actions.appendChild(btn);
 
   scrollToBottom();
@@ -1058,7 +1083,7 @@ async function streamResponse() {
 }
 
 // ─── Append message ──────────────────────────────────────────────────────────
-function appendMessage(role, text, fileNames) {
+function appendMessage(role, text, fileNames, reasoning) {
   const chat = document.getElementById('chat');
   const div = document.createElement('div');
   div.className = `msg ${role}`;
@@ -1078,7 +1103,7 @@ function appendMessage(role, text, fileNames) {
     });
   }
 
-  // Thinking block placeholder (AI only) — hidden until <think> content arrives
+  // Thinking block placeholder (AI only) — hidden until reasoning arrives
   if (role === 'ai') {
     const think = document.createElement('details');
     think.className = 'think-block';
@@ -1091,13 +1116,22 @@ function appendMessage(role, text, fileNames) {
   body.className = 'msg-body';
   if (text !== null) {
     if (role === 'ai') {
-      const parsed = parseThinking(text);
-      if (parsed.think) {
+      // Prefer explicit reasoning arg (new format); fall back to parsing <think> tags (legacy)
+      let answerText = text;
+      let reasoningText = reasoning || '';
+      if (!reasoningText) {
+        const parsed = parseThinking(text);
+        if (parsed.think) {
+          reasoningText = parsed.think;
+          answerText = parsed.main || text;
+        }
+      }
+      if (reasoningText) {
         const thinkEl = div.querySelector('.think-block');
         thinkEl.style.display = '';
-        thinkEl.querySelector('.think-body').textContent = parsed.think;
+        thinkEl.querySelector('.think-body').textContent = reasoningText;
       }
-      body.innerHTML = renderMarkdown(parsed.main);
+      body.innerHTML = renderMarkdown(answerText);
     } else {
       body.innerHTML = renderMarkdown(text);
     }
