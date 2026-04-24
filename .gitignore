@@ -1,0 +1,26 @@
+# AI models — too large for git, downloaded via download-model.py
+models/
+*.gguf
+
+# llama.cpp binaries — downloaded via update-llama-cpp.bat
+llama-cpp/
+
+# Legacy / old versions
+old/
+
+# User conversation history
+sessions.json
+
+# OS & editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
