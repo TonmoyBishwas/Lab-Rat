@@ -11,21 +11,21 @@ MODELS_DIR = os.path.join(ROOT, "models")
 
 MODELS = [
     {
-        "name": "Qwen2.5-Coder-7B Instruct Q4_K_M  (~4.7 GB)  RECOMMENDED  |  no-think, fast, code-specialized",
+        "name": "Gemma 4 E4B-it Q4_K_M  (~5.0 GB)  RECOMMENDED  |  Apr 3 2026, dense, thinking off by default",
+        "filename": "gemma-4-E4B-it-Q4_K_M.gguf",
+        "url": "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_K_M.gguf",
+        "launcher": "python start.py",
+    },
+    {
+        "name": "Qwen2.5-Coder-7B Instruct Q4_K_M (~4.7 GB)  CODE-SPECIALIST  |  older but best Python code per GB",
         "filename": "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
         "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
         "launcher": "python start.py",
     },
     {
-        "name": "Qwen2.5-Coder-14B Instruct Q4_K_M (~8.9 GB)  BETTER QUALITY  |  no-think, slower, strongest code",
+        "name": "Qwen2.5-Coder-14B Instruct Q4_K_M (~8.9 GB)  BEST QUALITY  |  slower, strongest local code at 16GB",
         "filename": "Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf",
         "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-14B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf",
-        "launcher": "python start.py",
-    },
-    {
-        "name": "Qwen3.5-9B Q4_K_M (~5.7 GB)  THINKING MODEL  |  slower, reasons through ambiguity",
-        "filename": "Qwen3.5-9B-Q4_K_M.gguf",
-        "url": "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/main/Qwen3.5-9B-Q4_K_M.gguf",
         "launcher": "python start.py",
     },
 ]
