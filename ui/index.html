@@ -796,8 +796,19 @@ async function checkConnection() {
   const dot = document.getElementById('status-dot');
   const lbl = document.getElementById('status-label');
   const hint = document.getElementById('hint-model');
-  dot.className = 'checking';
-  lbl.textContent = 'Connecting';
+
+  // Skip polling during generation — server is busy with the chat request,
+  // and receiving stream chunks is already proof the connection is alive.
+  if (isGenerating) return;
+
+  // Only show the yellow "Connecting" state on the very first check,
+  // or when transitioning from disconnected. Once connected, poll silently.
+  const wasConnected = dot.classList.contains('ok');
+  if (!wasConnected) {
+    dot.className = 'checking';
+    lbl.textContent = 'Connecting';
+  }
+
   try {
     const ac = new AbortController();
     const t = setTimeout(() => ac.abort(), 5000);
@@ -807,8 +818,10 @@ async function checkConnection() {
     const data = await r.json();
     const name = (data.data && data.data[0]) ? data.data[0].id : 'local';
     const shortName = name.split('/').pop().replace(/-GGUF$/i, '');
-    dot.className = 'ok';
-    lbl.textContent = 'Connected';
+    if (!wasConnected) {
+      dot.className = 'ok';
+      lbl.textContent = 'Connected';
+    }
     hint.textContent = shortName;
   } catch(e) {
     dot.className = '';
