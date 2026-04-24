@@ -1000,7 +1000,7 @@ function sendMessage() {
   appendMessage('user', text, fileNames);
 
   input.value = '';
-  autoResize(input);
+  resizeInput();
 
   streamResponse();
 }
@@ -1225,17 +1225,21 @@ function showError(msg) {
 }
 
 // ─── Auto-resize textarea ────────────────────────────────────────────────────
+function resizeInput() {
+  const el = document.getElementById('msg-input');
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 180) + 'px';
+}
+
 function autoResize(el) {
-  el.addEventListener('input', () => {
-    el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 180) + 'px';
-  });
+  el.addEventListener('input', resizeInput);
   el.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
   });
+  resizeInput(); // collapse to single line on startup
 }
 
 function scrollToBottom(force) {
