@@ -208,7 +208,6 @@
     display: flex;
     flex-direction: column;
     gap: 14px;
-    scroll-behavior: smooth;
   }
 
   /* Drop overlay */
@@ -1070,11 +1069,10 @@ async function streamResponse() {
             reasoningRaw += delta.reasoning_content;
             if (thinkEl.style.display === 'none') {
               thinkEl.style.display = '';
-              thinkEl.open = true;
+              thinkEl.open = false;  // start collapsed; user clicks to peek
               thinkEl.classList.add('streaming');
             }
             thinkBodyEl.textContent = reasoningRaw;
-            thinkBodyEl.scrollTop = thinkBodyEl.scrollHeight;
           }
 
           // Answer tokens
@@ -1211,7 +1209,7 @@ function appendMessage(role, text, fileNames, reasoning) {
   div.appendChild(actions);
 
   chat.appendChild(div);
-  scrollToBottom();
+  scrollToBottom(true);
   return div;
 }
 
@@ -1240,9 +1238,16 @@ function autoResize(el) {
   });
 }
 
-function scrollToBottom() {
+function scrollToBottom(force) {
   const chat = document.getElementById('chat');
-  chat.scrollTop = chat.scrollHeight;
+  // Only auto-scroll if user is already near the bottom, unless forced.
+  // "Near" = within 120px of the bottom.
+  const nearBottom = chat.scrollHeight - chat.scrollTop - chat.clientHeight < 120;
+  if (!force && !nearBottom) return;
+  // Wait for the next frame so layout has finished after the DOM update.
+  requestAnimationFrame(() => {
+    chat.scrollTop = chat.scrollHeight;
+  });
 }
 
 // ─── Copy helper ─────────────────────────────────────────────────────────────
