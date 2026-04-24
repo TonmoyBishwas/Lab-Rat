@@ -217,7 +217,7 @@ def run():
         [SERVER, "--model", model_path, "--threads", "8",
          "--ctx-size", str(ctx), "--batch-size", "512", "--ubatch-size", "128",
          "--cache-type-k", "q8_0", "--cache-type-v", "q8_0",
-         "--port", str(AI_PORT), "--host", "127.0.0.1", "--flash-attn", "--no-mmap"],
+         "--port", str(AI_PORT), "--host", "127.0.0.1", "--no-mmap"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
     procs.append(ai_proc)

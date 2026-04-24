@@ -15,9 +15,9 @@ echo  Current binaries were copied from Aug 2025 build.
 echo  Updating gives better CPU performance + new features.
 echo.
 echo  MANUAL METHOD (always works):
-echo  1. Go to: https://github.com/ggerganov/llama.cpp/releases/latest
-echo  2. Download: llama-bXXXX-bin-win-avx2-x64.zip
-echo     (avx2 = correct for Intel 12th gen)
+echo  1. Go to: https://github.com/ggml-org/llama.cpp/releases/latest
+echo  2. Download: llama-bXXXX-bin-win-cpu-x64.zip
+echo     (cpu-x64 includes AVX2/AVX512 feature detection)
 echo  3. Open the zip, copy all .exe and .dll files into:
 echo     %DEST%\
 echo  4. Overwrite existing files.
@@ -29,7 +29,7 @@ if /i not "%AUTO%"=="y" goto DONE
 
 echo.
 echo  Fetching latest release info from GitHub...
-curl -s "https://api.github.com/repos/ggerganov/llama.cpp/releases/latest" > "%TEMP%\llama_release.json"
+curl -sL "https://api.github.com/repos/ggml-org/llama.cpp/releases/latest" > "%TEMP%\llama_release.json"
 
 if %errorlevel% NEQ 0 (
     echo  Could not reach GitHub. Check internet connection.
@@ -44,8 +44,8 @@ if not defined TAG (
 )
 
 echo  Latest release: %TAG%
-set "ZIPNAME=llama-%TAG%-bin-win-avx2-x64.zip"
-set "ZIPURL=https://github.com/ggerganov/llama.cpp/releases/download/%TAG%/%ZIPNAME%"
+set "ZIPNAME=llama-%TAG%-bin-win-cpu-x64.zip"
+set "ZIPURL=https://github.com/ggml-org/llama.cpp/releases/download/%TAG%/%ZIPNAME%"
 set "TMPZIP=%TEMP%\llama_latest.zip"
 set "TMPDIR=%TEMP%\llama_extracted"
 
