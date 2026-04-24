@@ -16,6 +16,8 @@ AI_PORT  = 11434
 UI_PORT  = 8080
 
 MODELS_PRIORITY = [
+    "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
+    "Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf",
     "Qwen3.5-9B-Q4_K_M.gguf",
     "Qwen3-14B-Q4_K_M.gguf",
     "Qwen3.5-4B-Q4_K_M.gguf",
@@ -24,10 +26,12 @@ MODELS_PRIORITY = [
     "Qwen2.5-7B-Instruct-Q2_K.gguf",
 ]
 CTX_FOR = {
-    "Qwen3.5-9B-Q4_K_M.gguf":          8192,
-    "Qwen3-14B-Q4_K_M.gguf":            6144,
-    "Qwen3.5-4B-Q4_K_M.gguf":         16384,
-    "Qwen2.5-14B-Instruct-Q4_K_M.gguf": 4096,
+    "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf":  16384,
+    "Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf":  8192,
+    "Qwen3.5-9B-Q4_K_M.gguf":                  8192,
+    "Qwen3-14B-Q4_K_M.gguf":                   6144,
+    "Qwen3.5-4B-Q4_K_M.gguf":                 16384,
+    "Qwen2.5-14B-Instruct-Q4_K_M.gguf":        4096,
 }
 
 sessions_lock = threading.Lock()

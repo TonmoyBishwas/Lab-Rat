@@ -11,21 +11,21 @@ MODELS_DIR = os.path.join(ROOT, "models")
 
 MODELS = [
     {
-        "name": "Qwen3.5-9B Q4_K_M  (~5.7 GB)  RECOMMENDED  |  thinking mode, best balance",
+        "name": "Qwen2.5-Coder-7B Instruct Q4_K_M  (~4.7 GB)  RECOMMENDED  |  no-think, fast, code-specialized",
+        "filename": "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
+        "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
+        "launcher": "python start.py",
+    },
+    {
+        "name": "Qwen2.5-Coder-14B Instruct Q4_K_M (~8.9 GB)  BETTER QUALITY  |  no-think, slower, strongest code",
+        "filename": "Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf",
+        "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-14B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf",
+        "launcher": "python start.py",
+    },
+    {
+        "name": "Qwen3.5-9B Q4_K_M (~5.7 GB)  THINKING MODEL  |  slower, reasons through ambiguity",
         "filename": "Qwen3.5-9B-Q4_K_M.gguf",
         "url": "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/main/Qwen3.5-9B-Q4_K_M.gguf",
-        "launcher": "python start.py",
-    },
-    {
-        "name": "Qwen3-14B Q4_K_M   (~8.8 GB)  BETTER QUALITY  |  slower but stronger reasoning",
-        "filename": "Qwen3-14B-Q4_K_M.gguf",
-        "url": "https://huggingface.co/unsloth/Qwen3-14B-GGUF/resolve/main/Qwen3-14B-Q4_K_M.gguf",
-        "launcher": "python start.py",
-    },
-    {
-        "name": "Qwen3.5-4B Q4_K_M  (~2.5 GB)  FAST  |  smaller, quicker responses",
-        "filename": "Qwen3.5-4B-Q4_K_M.gguf",
-        "url": "https://huggingface.co/unsloth/Qwen3.5-4B-GGUF/resolve/main/Qwen3.5-4B-Q4_K_M.gguf",
         "launcher": "python start.py",
     },
 ]
