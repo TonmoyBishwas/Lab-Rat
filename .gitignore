@@ -24,3 +24,6 @@ __pycache__/
 *.pyo
 .venv/
 venv/
+
+# Claude Code local config
+.claude/

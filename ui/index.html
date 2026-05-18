@@ -708,6 +708,91 @@ Apply to points: P has rows [x, y, 1]; transformed = (M @ P.T).T[:, :2]. NEVER l
 - Use realistic domain values (sales in thousands, satisfaction 1-10, budgets in lakhs/thousands, delivery_days 2-7 etc.).
 - Put data generation in one short block at the top, clearly commented.
 
+=== LAB 04 RECIPES (Spread plots &amp; Color theory) ===
+
+Spread plots:
+- Box plot (one group):    plt.boxplot(values)
+- Box plot (multi-group):  sns.boxplot(data=df, x='group', y='value')
+                           OR loop with plt.boxplot(vals, positions=[i+1])
+- Violin (seaborn):        sns.violinplot(data=df, x='group', y='value')
+- Violin (manual / Lab):   for each group i:
+                              kde  = scipy.stats.gaussian_kde(vals)
+                              xs   = np.linspace(vals.min(), vals.max(), 200)
+                              dens = kde(xs); dens = dens / dens.max() * 0.4
+                              ax.fill_betweenx(xs, i - dens, i + dens, alpha=0.4)
+  CRITICAL ARG ORDER: first arg is `xs` (the np.linspace VALUE-AXIS array,
+  shape (200,)). Second and third are `i - dens` and `i + dens` (the mirrored
+  density bounds). NEVER pass the position index i or a scalar as the first
+  arg — that produces an empty/degenerate violin.
+  In a composite figure, call `axes[r,c].fill_betweenx(...)` — never
+  `plt.fill_betweenx(..., ax=axes[r,c])`. The module-level plt.fill_betweenx
+  has NO `ax=` kwarg and will TypeError.
+- Ridgeline (STANDALONE figure only, no surrounding subplot grid):
+      fig, axes = joypy.joyplot(df, by='group', column='value',
+                                kind='kde', overlap=0.5)
+- Ridgeline INSIDE a composite plt.subplots(R, C) figure: do NOT call
+  joypy.joyplot at all. joypy creates its own figure and silently ignores or
+  errors on ax=. ALWAYS use the manual stacked-KDE fallback for that slot:
+      groups = df['group'].unique()
+      for i, g in enumerate(groups):
+          vals = df[df['group']==g]['value'].values
+          kde  = scipy.stats.gaussian_kde(vals)
+          xs   = np.linspace(vals.min(), vals.max(), 200)
+          dens = kde(xs); dens = dens / dens.max() * 0.4
+          ax.fill_between(xs, i - dens, i + dens, alpha=0.5)
+      ax.set_yticks(range(len(groups))); ax.set_yticklabels(groups)
+  Rule of thumb: if the question says "1x2", "2x1", "2x2", "2x3", or any
+  subplot grid, joypy is OFF-LIMITS. Use the fallback above.
+
+Color models (skimage):
+- Mandatory float conversion: img = img_as_float(skimage.data.astronaut())
+- RGB -&gt; HSV:  hsv = skimage.color.rgb2hsv(img)        # H, S, V in [0,1]
+- HSV -&gt; RGB:  skimage.color.hsv2rgb([h, s, v])        # RGB in [0,1]
+- Channel split: img[..., 0]=R, img[..., 1]=G, img[..., 2]=B
+                 (same axis indexing for HSV channels)
+- Display each channel with cmap='gray'.
+
+Hue arithmetic (h in [0,1], wrap with np.mod(h, 1.0) — NEVER degrees):
+- Complementary: [h, h+0.5]
+- Triadic:       [h, h+1/3, h+2/3]
+- Analogous:     [h, h+1/12, h-1/12]
+Build palette: cols = [color.hsv2rgb([hh, 0.65, 0.9]) for hh in hs]
+Swatch row:    for i, c in enumerate(cols):
+                   ax.add_patch(plt.Rectangle((i,0), 1, 1, color=c))
+               ax.set_xlim(0, len(cols)); ax.set_ylim(0,1); ax.axis('off')
+
+Heatmaps &amp; palettes:
+- Default:                  sns.heatmap(M, cmap='viridis')
+- Custom discrete palette:  ListedColormap(palette_list)   # e.g. palettable Set2_8.mpl_colors
+- Divergent (correlation):  BUILD the cmap as a variable first, then pass it.
+      div_cmap = LinearSegmentedColormap.from_list(
+                    'bwr_div', [(0,'blue'),(0.5,'white'),(1,'red')])
+      sns.heatmap(corr, cmap=div_cmap, center=0, annot=True)
+  The string 'bwrd' / 'bwr_div' is a NAME YOU GIVE the cmap, not a registered
+  matplotlib colormap. Never write cmap='bwrd' as a bare string — matplotlib
+  will raise KeyError. Either build the cmap and pass the variable, or use a
+  real built-in name like 'coolwarm', 'RdBu_r', or 'seismic'.
+- Outlier handling on a noisy matrix M:
+    Clip:      np.clip(M, np.quantile(M, 0.02), np.quantile(M, 0.98))
+    Quantile:  ranks = M.flatten().argsort().argsort() / (M.size - 1)
+               M_q   = ranks.reshape(M.shape)
+    Hybrid:    np.sign(M) * np.log1p(np.abs(M))
+- Multi-checkpoint gradient: stops MUST be a list of (position_in_[0,1], color)
+  TWO-tuples. Never 3-tuples; never an HSV array as the color.
+  Fixed checkpoints (worked example):
+      stops = [(0.0, 'navy'), (0.4, 'lightblue'),
+               (0.6, 'lightcoral'), (1.0, 'darkred')]
+      cmap  = LinearSegmentedColormap.from_list('q4', stops)
+  Quantile-anchored (worked example, do NOT discard the computed stops):
+      qs      = [0.05, 0.4, 0.6, 0.95]
+      colors  = ['navy', 'lightblue', 'lightcoral', 'darkred']
+      qvals   = np.quantile(M, qs)
+      vmin, vmax = M.min(), M.max()
+      pos     = [(q - vmin) / (vmax - vmin) for q in qvals]
+      stops   = list(zip(pos, colors))
+      cmap    = LinearSegmentedColormap.from_list('qcmap', stops)
+      # then sns.heatmap(M, cmap=cmap, vmin=vmin, vmax=vmax)
+
 === PLOT STYLE (match the course labs) ===
 - Default to plain matplotlib: plt.plot, plt.bar, plt.hist, plt.scatter, plt.imshow.
 - Use seaborn ONLY when the question names sns.load_dataset (tips, iris, penguins, titanic) or a specifically seaborn plot (heatmap, kdeplot).
@@ -723,6 +808,19 @@ Apply to points: P has rows [x, y, 1]; transformed = (M @ P.T).T[:, :2]. NEVER l
 - Never ask the student to re-paste data. Synthesize and note the assumption.
 - Never omit an import. Output must run as a single script.
 - Never wrap the answer in prose like "Here is the solution". Start at "Assumptions:".
+- Never forget img_as_float() before color.rgb2hsv — passing uint8 gives wrong hues.
+- Never write hue offsets in degrees. skimage hue is fractional [0,1].
+- Never combine sns.violinplot with a manual fill_betweenx on the same axes — pick one.
+- Never call joypy.joyplot with positional args; always by=..., column=...
+- Never pass ax= to joypy.joyplot — it creates its own figure. If the question requires a multi-subplot grid, do NOT use joypy at all in any slot; use the manual stacked-KDE fallback even when the question literally says "ridgeline (joypy)".
+- 'bwrd', 'bwr_div', or any custom name in our examples is JUST A LABEL you pass to LinearSegmentedColormap.from_list. It is NOT a registered matplotlib colormap. cmap='bwrd' as a bare string will raise KeyError. Build the cmap into a variable first.
+- Never call plt.fill_betweenx with ax= kwarg — that kwarg does not exist. Always go through the axes object: axes[r,c].fill_betweenx(xs, i - dens, i + dens, alpha=0.4).
+- LinearSegmentedColormap.from_list stops must be (position_in_[0,1], color) two-tuples. Never (pos, 'hsv', [h,s,v]) three-tuples; never pass an HSV array as the color value.
+- When the question asks for a "quantile-anchored" colormap, you MUST USE the computed normalized stops in from_list — do not compute them and then pass only the bare colors list.
+- When building a composite plt.subplots(R, C) figure, pass ax=axes[i,j] to EVERY sns.heatmap / sns.boxplot / sns.violinplot call. Never call plt.subplots() again inside the composite — that creates an orphan figure and the slot stays empty.
+- Manual violin signature is fill_betweenx(xs, i - dens, i + dens, alpha=...). xs is the value axis, the two density bounds are positional args 2 and 3. Never fill_betweenx(i, dens, ...) — that is the wrong call shape.
+- Before df.corr() or df.cov() on a DataFrame that may contain string columns (e.g. iris has 'species'), do df.select_dtypes(include='number').corr() or pass numeric_only=True.
+- For correlation heatmaps with a divergent palette, always pass center=0.
 
 Keep answers compact — aim for 30-60 lines of code for a typical CT part.</textarea>
   </div>

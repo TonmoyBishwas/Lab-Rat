@@ -1,0 +1,262 @@
+Questions:
+(1)
+I have a Pandas DataFrame called df with a column named reaction_time containing 500 continuous numeric values. I cannot paste the data here. Create a 1x2 subplot.
+
+On the left, calculate the frequency polygon of reaction_time using 20 bins and plot it.
+
+On the right, plot a KDE of the same data.
+
+Calculate the Contra-Harmonic Mean (p=1) and the Geometric Mean of reaction_time. Add both of these as vertical dashed lines (red for CHM, green for GM) on the KDE plot, with a legend.
+
+
+(2)The exam paper shows a 2D shape that looks like a basic kite, centered around the origin. I don't have the coordinates, so generate a representative set of points for it.
+
+Build a single 3x3 composite homogeneous matrix that applies the following in order: A horizontal shear of 0.4, a scale of 1.5 on the y-axis, and a translation of (-2, 3).
+
+Apply this composite matrix to your kite shape.
+
+Create a 1x2 subplot. Left panel: plot the original and transformed shapes in Cartesian coordinates with an equal aspect ratio. Right panel: convert the transformed Cartesian points into Polar coordinates (r, theta) and plot them on a polar projection.
+
+
+(3)There is a table on my exam with the following columns: Department, Budget, Actual_Spend, and Employee_Satisfaction (scale 1-10). There are about 5 departments. I can't copy the data.
+
+Write a script that first adds a new column called Variance (Budget minus Actual_Spend).
+
+Create a 1x2 figure. Left panel: a grouped bar chart comparing Budget and Actual_Spend side-by-side for each Department.
+
+Right panel: a lollipop plot showing the Variance for each department. The sticks should be blue if the variance is positive, and red if the variance is negative.
+
+
+Solutions:
+(1)Assumptions:
+- The DataFrame `df` exists and contains a column `reaction_time` with 500 continuous numeric values.
+- The data is strictly positive, as required for calculating the Geometric Mean and Harmonic/Contra-Harmonic Means.
+
+```python
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# --- Synthetic Data Generation (since data cannot be pasted) ---
+np.random.seed(42)
+# Generate 500 continuous, positive reaction times (e.g., normally distributed around 300ms)
+data_size = 500
+reaction_time_data = np.random.normal(loc=300, scale=50, size=data_size)
+# Ensure all values are positive for mean calculations
+reaction_time_data[reaction_time_data < 1] = 1
+df = pd.DataFrame({'reaction_time': reaction_time_data})
+# ----------------------------------------------------------------
+
+# --- Mean Calculations ---
+# Geometric Mean (GM)
+# GM = exp(mean(ln(x)))
+geometric_mean = np.exp(np.mean(np.log(df['reaction_time'])))
+
+# Contra-Harmonic Mean (CHM, p=1) -> Equivalent to Harmonic Mean (HM)
+# HM = N / sum(1/x)
+harmonic_mean = len(df) / np.sum(1 / df['reaction_time'])
+
+# --- Plotting ---
+fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+plt.style.use('seaborn-v0_8-whitegrid')
+
+# --- Left Subplot: Frequency Polygon ---
+ax1 = axes[0]
+# Calculate histogram data
+counts, bins, patches = ax1.hist(df['reaction_time'], bins=20, density=True, alpha=0.6, label='Frequency Distribution')
+
+# Calculate bin centers
+bin_centers = (bins[:-1] + bins[1:]) / 2
+
+# Plot the frequency polygon (connecting the midpoints)
+ax1.plot(bin_centers, counts, color='blue', linewidth=2, marker='o', markersize=4, label='Frequency Polygon')
+
+ax1.set_title('Reaction Time Frequency Polygon (20 Bins)')
+ax1.set_xlabel('Reaction Time (ms)')
+ax1.set_ylabel('Density')
+ax1.legend()
+
+# --- Right Subplot: KDE Plot with Means ---
+ax2 = axes[1]
+# Plot KDE using seaborn
+sns.kdeplot(df['reaction_time'], ax=ax2, fill=True, color='skyblue', label='KDE Density')
+
+# Add vertical lines for the means
+ax2.axvline(harmonic_mean, color='red', linestyle='--', linewidth=2, label=f'CHM (p=1): {harmonic_mean:.2f}')
+ax2.axvline(geometric_mean, color='green', linestyle='--', linewidth=2, label=f'GM: {geometric_mean:.2f}')
+
+ax2.set_title('Kernel Density Estimate (KDE) of Reaction Time')
+ax2.set_xlabel('Reaction Time (ms)')
+ax2.set_ylabel('Density')
+ax2.legend()
+
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- The frequency polygon is calculated by plotting the density values at the midpoint of each bin derived from the histogram.
+- If the data were highly skewed, using a log scale on the x-axis for the KDE plot might better visualize the distribution shape.
+- To change the binning behavior, replace `bins=20` in `ax1.hist` with `bins='auto'` (Freedman-Diaconis) or `bins=np.sqrt(len(df))` (Square Root rule).
+
+
+(2)
+Assumptions:
+- The "kite shape" is represented by a set of points sampled along the edges connecting the vertices (0, 4), (2, 0), (0, -3), and (-2, 0).
+- The transformation is applied to all sampled points of the kite shape.
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.spatial.transform import Rotation as R
+
+# --- 1. Data Generation (Kite Shape) ---
+def generate_kite_points():
+    """Generates a dense set of points approximating a kite shape."""
+    vertices = np.array([[0, 4], [2, 0], [0, -3], [-2, 0]])
+    points = []
+    
+    # Edges: (0,4) -> (2,0); (2,0) -> (0,-3); (0,-3) -> (-2,0); (-2,0) -> (0,4)
+    edges = [(0, 1), (1, 2), (2, 3), (3, 0)]
+    
+    for i, j in edges:
+        p1 = vertices[i]
+        p2 = vertices[j]
+        # Generate 20 points along the segment
+        t = np.linspace(0, 1, 20)
+        segment_points = p1 + t[:, np.newaxis] * (p2 - p1)
+        points.append(segment_points)
+        
+    return np.vstack(points)
+
+original_points = generate_kite_points()
+
+# --- 2. Define and Compose Homogeneous Matrix ---
+
+# T1: Horizontal Shear (0.4)
+S_x = np.array([
+    [1, 0.4, 0],
+    [0, 1, 0],
+    [0, 0, 1]
+])
+
+# T2: Scale (1.5 on Y)
+S_y = np.array([
+    [1, 0, 0],
+    [0, 1.5, 0],
+    [0, 0, 1]
+])
+
+# T3: Translation (-2, 3)
+T = np.array([
+    [1, 0, -2],
+    [0, 1, 3],
+    [0, 0, 1]
+])
+
+# Composite Matrix M = T * S_y * S_x (Order: Shear -> Scale -> Translate)
+M = T @ S_y @ S_x
+
+# --- 3. Apply Transformation ---
+
+# Convert points to homogeneous coordinates (x, y, 1)
+homogeneous_points = np.hstack([original_points, np.ones((original_points.shape[0], 1))])
+
+# Apply transformation: P' = M @ P
+transformed_homogeneous = (M @ homogeneous_points.T).T
+
+# Convert back to Cartesian coordinates
+transformed_points = transformed_homogeneous[:, :2]
+
+# --- 4. Visualization ---
+
+fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+plt.suptitle("Kite Shape Transformation: Cartesian vs. Polar Projection", fontsize=16)
+
+# --- Left Panel: Cartesian Plot ---
+ax_cart = axes[0]
+ax_cart.plot(original_points[:, 0], original_points[:, 1], 'b-', label='Original Shape', alpha=0.6)
+ax_cart.plot(transformed_points[:, 0], transformed_points[:, 1], 'r-', label='Transformed Shape', alpha=0.8)
+ax_cart.
+
+(3)Assumptions:
+- The data is structured as a pandas DataFrame with columns: `Department` (categorical), `Budget` (numeric), `Actual_Spend` (numeric), and `Employee_Satisfaction` (numeric).
+- The number of departments is approximately 5.
+- The data is suitable for direct plotting without complex aggregation (i.e., the provided rows represent the department totals/averages).
+
+```python
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# --- Data Simulation (Since data cannot be copied) ---
+np.random.seed(42)
+departments = ['HR', 'Engineering', 'Marketing', 'Finance', 'Sales']
+data = {
+    'Department': np.random.choice(departments, 25),
+    'Budget': np.random.randint(100000, 500000, 25),
+    'Actual_Spend': np.random.randint(80000, 450000, 25),
+    'Employee_Satisfaction': np.random.randint(5, 11, 25)
+}
+df = pd.DataFrame(data)
+
+# --- Feature Engineering ---
+df['Variance'] = df['Budget'] - df['Actual_Spend']
+
+# Aggregate data by department for plotting
+dept_summary = df.groupby('Department').agg({
+    'Budget': 'mean',
+    'Actual_Spend': 'mean',
+    'Variance': 'mean'
+}).reset_index()
+
+# --- Visualization ---
+fig, axes = plt.subplots(1, 2, figsize=(18, 7))
+plt.subplots_adjust(wspace=0.3)
+
+# Left Panel: Grouped Bar Chart (Budget vs Actual_Spend)
+bar_width = 0.35
+index = np.arange(len(dept_summary['Department']))
+
+ax1 = axes[0]
+rects1 = ax1.bar(index - bar_width/2, dept_summary['Budget'], bar_width, label='Budget', color='skyblue')
+rects2 = ax1.bar(index + bar_width/2, dept_summary['Actual_Spend'], bar_width, label='Actual Spend', color='salmon')
+
+ax1.set_ylabel('Amount ($)')
+ax1.set_xlabel('Department')
+ax1.set_title('Budget vs. Actual Spend by Department')
+ax1.set_xticks(index)
+ax1.set_xticklabels(dept_summary['Department'])
+ax1.legend()
+ax1.grid(axis='y', linestyle='--', alpha=0.7)
+
+# Right Panel: Lollipop Plot (Variance)
+ax2 = axes[1]
+departments_sorted = dept_summary['Department'].tolist()
+variances = dept_summary['Variance'].tolist()
+
+# Create the lollipop plot
+for i, variance in enumerate(variances):
+    # Draw the stick (line)
+    ax2.plot([i, i], [0, variance], color='gray', linewidth=2)
+    # Draw the dot (marker)
+    color = 'blue' if variance >= 0 else 'red'
+    ax2.scatter(i, variance, s=100, color=color, zorder=3)
+
+# Add labels and title
+ax2.set_title('Variance (Budget - Actual Spend) by Department')
+ax2.set_xlabel('Department')
+ax2.set_ylabel('Variance ($)')
+ax2.set_xticks(range(len(departments_sorted)))
+ax2.set_xticklabels(departments_sorted)
+ax2.axhline(0, color='black', linewidth=0.8) # Zero line
+
+plt.suptitle('Departmental Financial Analysis', fontsize=16)
+plt.show()
+```
+
+Notes:
+- For the bar chart, if you wanted to compare the *ratio* of Actual Spend to Budget, you would change the Y-axis to represent the ratio instead of the absolute amount.
+- If the departments had many entries (not just one summary row), you would need to use `sns.barplot` and group by Department and use `estimator=np.mean` to calculate the mean for the bars.

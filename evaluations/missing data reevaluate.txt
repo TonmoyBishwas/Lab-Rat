@@ -1,0 +1,235 @@
+(1)
+Assumptions:
+- The DataFrame `df` is created with 500 rows.
+- The column `reaction_time` contains continuous, positive numeric data suitable for mean calculations.
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# --- Data Synthesis ---
+# Create synthetic data matching the description (500 continuous numeric values)
+np.random.seed(42)
+reaction_times = np.random.normal(loc=50, scale=15, size=500)
+# Ensure all values are positive for GM and HM calculations
+reaction_times[reaction_times < 0] = 1 
+df = pd.DataFrame({'reaction_time': reaction_times})
+
+# --- Calculations ---
+x = df['reaction_time']
+
+# Contra-Harmonic Mean (CHM, p=1): (x**2).sum() / x.sum()
+chm = (x**2).sum() / x.sum()
+
+# Geometric Mean (GM): np.exp(np.log(x).mean())
+gm = np.exp(np.log(x).mean())
+
+# --- Visualization ---
+fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+plt.suptitle("Reaction Time Distribution Analysis", fontsize=16)
+
+# Left Subplot: Frequency Polygon
+ax_left = axes[0]
+# Use plt.hist to get the counts and bin edges
+counts, bins, patches = ax_left.hist(x, bins=20, density=True, label='Frequency')
+# Calculate bin centers for plotting the polygon
+bin_centers = 0.5 * (bins[:-1] + bins[1:])
+# Plot the frequency polygon by connecting the bin centers and heights
+ax_left.plot(bin_centers, counts, marker='o', linestyle='-', color='blue', label='Frequency Polygon')
+ax_left.set_title('Frequency Polygon of Reaction Time')
+ax_left.set_xlabel('Reaction Time')
+ax_left.set_ylabel('Density')
+ax_left.grid(axis='y', alpha=0.5)
+
+# Right Subplot: KDE Plot with Means
+ax_right = axes[1]
+# Plot the KDE using seaborn
+sns.kdeplot(x, ax=ax_right, fill=True, color='skyblue', label='KDE')
+
+# Add vertical lines for means
+# CHM (Red dashed line)
+ax_right.axvline(chm, color='red', linestyle='--', linewidth=2, label=f'CHM (p=1): {chm:.2f}')
+# GM (Green dashed line)
+ax_right.axvline(gm, color='green', linestyle='--', linewidth=2, label=f'GM: {gm:.2f}')
+
+ax_right.set_title('Kernel Density Estimate (KDE) of Reaction Time')
+ax_right.set_xlabel('Reaction Time')
+ax_right.set_ylabel('Density')
+ax_right.legend()
+ax_right.grid(axis='y', alpha=0.5)
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout for suptitle
+plt.show()
+```
+
+Notes:
+- The frequency polygon is plotted by first generating the histogram and then connecting the centers of the bins with the corresponding density values.
+- The KDE plot uses `seaborn.kdeplot` for a smooth density estimation, and `ax.axvline` is used to overlay the calculated means.
+- If your real data is highly skewed, the GM and CHM will be significantly different from the arithmetic mean (which is not plotted here).
+
+
+
+
+(2)
+Assumptions:
+- The kite shape is defined by the vertices (0, 2), (1, 0), (0, -2), and (-1, 0).
+- The shape is represented by connecting these vertices sequentially.
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+
+# --- 1. Generate Kite Points ---
+# Vertices of the kite shape
+x_orig = np.array([0, 1, 0, -1, 0])
+y_orig = np.array([2, 0, -2, 0, 2])
+
+# --- 2. Define Transformation Matrices ---
+# Horizontal shear (shx = 0.4)
+H = np.array([[1, 0.4, 0],
+              [0, 1, 0],
+              [0, 0, 1]])
+
+# Y-Scale (sy = 1.5)
+S = np.array([[1, 0, 0],
+              [0, 1.5, 0],
+              [0, 0, 1]])
+
+# Translation (tx = -2, ty = 3)
+T = np.array([[1, 0, -2],
+              [0, 1, 3],
+              [0, 0, 1]])
+
+# --- 3. Composite Matrix Calculation ---
+# Order: Horizontal Shear (A) -> Y-Scale (B) -> Translation (C)
+# M = C @ B @ A
+M = T @ S @ H
+
+# --- 4. Apply Transformation ---
+# Convert original Cartesian points to homogeneous coordinates (N x 3)
+P_homo = np.vstack((x_orig, y_orig, np.ones_like(x_orig))).T
+
+# Apply transformation: P'_homo = P_homo @ M.T
+# We use M.T because P_homo is row-major (N x 3) and M is (3 x 3)
+P_transformed_homo = P_homo @ M.T
+
+# Extract transformed Cartesian coordinates
+x_trans = P_transformed_homo[:, 0]
+y_trans = P_transformed_homo[:, 1]
+
+# --- 5. Plotting ---
+fig, axes = plt.subplots(1, 2, figsize=(16, 7))
+plt.suptitle("Kite Shape Transformation: Cartesian vs. Polar Projection", fontsize=16)
+
+# --- Left Panel: Cartesian Coordinates ---
+ax_cart = axes[0]
+ax_cart.plot(x_orig, y_orig, 'o-', label='Original Kite', color='blue')
+ax_cart.plot(x_trans, y_trans, 'o-', label='Transformed Kite', color='red')
+ax_cart.set_title('Cartesian Coordinates (Original vs. Transformed)')
+ax_cart.set_xlabel('X Coordinate')
+ax_cart.set_ylabel('Y Coordinate')
+ax_cart.legend()
+ax_cart.grid(True, linestyle='--', alpha=0.6)
+# Ensure equal aspect ratio for geometric accuracy
+ax_cart.set_aspect('equal', adjustable='box')
+
+# --- Right Panel: Polar Coordinates ---
+ax_polar = axes[1]
+
+# Convert transformed Cartesian points to Polar coordinates (r, theta)
+r_trans = np.sqrt(x_trans**2 + y_trans**2)
+# np.arctan2 handles all quadrants correctly
+theta_trans = np.arctan2(y_trans, x_trans)
+
+# Plotting r vs theta
+ax_polar.plot(theta_trans, r_trans, 'o-', color='red')
+ax_polar.set_title('Polar Projection of Transformed Shape (r vs $\\theta$)')
+ax_polar.set_xlabel('Angle $\\theta$ (radians)')
+ax_polar.set_ylabel('Radius $r$')
+ax_polar.grid(True, linestyle='--', alpha=0.6)
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+plt.show()
+```
+
+Notes:
+- The composite matrix $M$ is calculated as $T @ S @ H$ because the operations are applied sequentially (A then B then C).
+- For the Cartesian plot, `ax_cart.set_aspect('equal')` is crucial to prevent distortion due to differing axis scales.
+- For the polar plot, `np.arctan2(y, x)` is used to correctly calculate the angle $\theta$ across all four quadrants.
+
+
+
+
+
+
+
+
+
+(3)Assumptions:
+- The data contains 5 departments.
+- Column names are 'Department', 'Budget', 'Actual_Spend', and 'Employee_Satisfaction'.
+- Realistic values are used for financial and satisfaction metrics.
+
+```python
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Synthetic Data Generation
+data = {
+    'Department': ['HR', 'Engineering', 'Sales', 'Marketing', 'Finance'],
+    'Budget': [150000, 800000, 450000, 200000, 300000],
+    'Actual_Spend': [145000, 850000, 420000, 210000, 290000],
+    'Employee_Satisfaction': [7, 9, 6, 8, 7]
+}
+df = pd.DataFrame(data)
+
+# 1. Add Variance column
+df['Variance'] = df['Budget'] - df['Actual_Spend']
+
+# --- Plotting ---
+fig, axes = plt.subplots(1, 2, figsize=(18, 7))
+plt.suptitle("Departmental Budget Analysis", fontsize=16)
+
+# Left Panel: Grouped Bar Chart (Budget vs Actual_Spend)
+bar_width = 0.35
+index = np.arange(len(df['Department']))
+
+axes[0].bar(index - bar_width/2, df['Budget'], bar_width, label='Budget', color='skyblue')
+axes[0].bar(index + bar_width/2, df['Actual_Spend'], bar_width, label='Actual Spend', color='salmon')
+
+axes[0].set_xlabel('Department')
+axes[0].set_ylabel('Amount (in thousands)')
+axes[0].set_title('Budget vs Actual Spend by Department')
+axes[0].set_xticks(index)
+axes[0].set_xticklabels(df['Department'])
+axes[0].legend()
+axes[0].grid(axis='y', linestyle='--', alpha=0.7)
+
+# Right Panel: Lollipop Plot (Variance)
+# Determine colors based on variance sign
+colors = np.where(df['Variance'] >= 0, 'blue', 'red')
+
+# Plot the lines (sticks)
+axes[1].vlines(np.arange(len(df)), 0, df['Variance'], color=colors, linewidth=2)
+# Plot the points (lollipop heads)
+axes[1].scatter(np.arange(len(df)), df['Variance'], color=colors, s=100, zorder=3)
+
+axes[1].set_xlabel('Department')
+axes[1].set_ylabel('Variance (Budget - Actual Spend)')
+axes[1].set_title('Variance of Spending by Department')
+axes[1].set_xticks(np.arange(len(df)))
+axes[1].set_xticklabels(df['Department'])
+axes[1].axhline(0, color='black', linewidth=0.8) # Zero line for reference
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout for suptitle
+plt.show()
+```
+
+Notes:
+- The grouped bar chart uses `numpy.arange` to correctly position the two bars side-by-side for each department.
+- The lollipop plot uses `vlines` for the stick and `scatter` for the point, allowing easy color coding based on the `Variance` sign.
+- If the data were much larger, using Seaborn's `barplot` or `pointplot` with `hue` could simplify the grouped bar chart, but manual plotting is clearer for this specific requirement.

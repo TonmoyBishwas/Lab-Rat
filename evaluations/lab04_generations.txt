@@ -1,0 +1,2124 @@
+1)
+Assumptions:
+- The `iris` dataset contains columns for `sepal_length` (numeric) and `species` (categorical).
+
+```python
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Load the iris dataset
+iris = sns.load_dataset('iris')
+
+# Create the box plot
+plt.figure(figsize=(8, 6))
+sns.boxplot(data=iris, x='species', y='sepal_length')
+
+# Set labels and title
+plt.title('Sepal Length Distribution by Iris Species')
+plt.xlabel('Species')
+plt.ylabel('Sepal Length (cm)')
+
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- Seaborn's `boxplot` is the most direct way to visualize the distribution of a continuous variable across discrete groups.
+- If you wanted to see the density distribution alongside the box plot, you could use `sns.violinplot` instead.
+- Ensure the `species` column is treated as a categorical variable by seaborn.
+
+
+2)Assumptions:
+- The user requires standard image processing and plotting libraries (skimage, matplotlib, numpy).
+- The image is a standard RGB image (3 channels).
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from skimage import data, color
+from skimage.util import img_as_float
+
+# Load the astronaut image
+img_uint8 = data.astronaut()
+
+# Mandatory float conversion for color operations
+img_float = img_as_float(img_uint8)
+
+# Channel split: R, G, B
+R = img_float[..., 0]
+G = img_float[..., 1]
+B = img_float[..., 2]
+
+# Create 1x3 subplot figure
+fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+fig.suptitle("Astronaut Image Channels (Grayscale)", fontsize=16)
+
+# Display Red channel
+axes[0].imshow(R, cmap='gray')
+axes[0].set_title('R Channel')
+axes[0].axis('off')
+
+# Display Green channel
+axes[1].imshow(G, cmap='gray')
+axes[1].set_title('G Channel')
+axes[1].axis('off')
+
+# Display Blue channel
+axes[2].imshow(B, cmap='gray')
+axes[2].set_title('B Channel')
+axes[2].axis('off')
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout for suptitle
+plt.show()
+```
+
+Notes:
+- `img_as_float()` is crucial to ensure correct color conversion and channel handling in skimage.
+- Using `cmap='gray'` forces the display of the intensity of each channel as a grayscale image.
+- The channel indexing follows standard RGB order: 0=R, 1=G, 2=B.
+
+
+3)Assumptions:
+- The base hue $h=0.6$ is provided.
+- Saturation (S) and Value (V) are set to standard values (0.65, 0.9) for color generation.
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import skimage.color
+
+# Define base hue and parameters
+h_base = 0.6
+S = 0.65
+V = 0.9
+
+# 1. Calculate complementary hue (h + 0.5)
+h_complementary = np.mod(h_base + 0.5, 1.0)
+
+# 2. Convert hues to RGB using HSV -> RGB
+# For the base color
+hsv_base = np.array([h_base, S, V])
+rgb_base = skimage.color.hsv2rgb(hsv_base)
+
+# For the complementary color
+hsv_comp = np.array([h_complementary, S, V])
+rgb_comp = skimage.color.hsv2rgb(hsv_comp)
+
+# 3. Display colors as side-by-side rectangles
+fig, ax = plt.subplots(1, 1, figsize=(5, 2))
+
+# Draw the base color rectangle
+rect_base = plt.Rectangle((0, 0), 1, 1, color=rgb_base)
+ax.add_patch(rect_base)
+
+# Draw the complementary color rectangle
+rect_comp = plt.Rectangle((1, 0), 1, 1, color=rgb_comp)
+ax.add_patch(rect_comp)
+
+# Set plot properties
+ax.set_xlim(0, 2)
+ax.set_ylim(0, 1)
+ax.axis('off')
+ax.set_title("Complementary")
+
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- The complementary hue is calculated by adding 0.5 to the base hue and wrapping the result using `np.mod(h, 1.0)`.
+- `plt.Rectangle` is used to draw the colors, where the first rectangle starts at x=0 and the second starts at x=1.
+- Ensure S and V are kept constant when generating the palette to maintain consistent brightness and saturation.
+
+
+
+4)Assumptions:
+- The astronaut image is loaded from `skimage.data`.
+- The image is a standard RGB image (3 channels).
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import skimage.data
+import skimage.color
+import skimage.util
+
+# Load the astronaut image and convert to float
+img_rgb = skimage.data.astronaut()
+img_float = img_as_float(img_rgb)
+
+# Convert RGB to HSV
+img_hsv = skimage.color.rgb2hsv(img_float)
+
+# Extract the Hue channel (index 0)
+hue_channel = img_hsv[..., 0]
+
+# Display the Hue channel using a grayscale colormap
+plt.figure(figsize=(8, 8))
+plt.imshow(hue_channel, cmap='gray')
+plt.title("Hue channel")
+plt.xlabel("X-axis")
+plt.ylabel("Y-axis")
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- `img_as_float()` is crucial because `rgb2hsv` expects float inputs in the range [0, 1].
+- The Hue channel (H) is the first channel (index 0) in the resulting HSV array.
+- Using `cmap='gray'` visualizes the fractional hue values as intensity, which is standard practice for displaying single channels.
+
+
+5)Assumptions:
+- The `iris` dataset is available via `seaborn.load_dataset`.
+- `petal_width` is the quantitative variable (y-axis).
+- `species` is the categorical variable (x-axis).
+
+```python
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Load the iris dataset
+iris = sns.load_dataset("iris")
+
+# Create the violin plot
+plt.figure(figsize=(8, 6))
+sns.violinplot(data=iris, x="species", y="petal_width")
+
+# Set title and labels
+plt.title("Petal Width Distribution by Iris Species")
+plt.xlabel("Species")
+plt.ylabel("Petal Width (cm)")
+
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- Seaborn handles the grouping and plotting automatically when using `x` and `y` arguments.
+- The violin plot shows the probability density of the data at different values for each species.
+- If you wanted to compare means, a boxplot or swarmplot might be more direct, but the violin plot gives a richer view of distribution shape.
+
+
+
+6)Assumptions:
+- The `flights` dataset contains columns 'month', 'year', and a quantitative column (assumed to be 'passengers') representing the values to be visualized.
+- The heatmap should display the aggregated sum of 'passengers' for each month across all years.
+
+```python
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# Load the flights dataset
+flights = sns.load_dataset('flights')
+
+# Pivot the data: index=month, columns=year, values=passengers (summed)
+pivot_df = flights.pivot_table(index='month', columns='year', values='passengers', aggfunc='sum')
+
+# Create the heatmap
+plt.figure(figsize=(12, 8))
+sns.heatmap(
+    pivot_df,
+    cmap='viridis',
+    annot=False, # Set to True if you want the numbers in the cells
+    cbar=True,   # Ensure the colorbar is displayed
+    linewidths=.5,
+    linecolor='black'
+)
+
+plt.title('Flights Passenger Counts by Month and Year')
+plt.xlabel('Year')
+plt.ylabel('Month')
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- `sns.heatmap` is the most direct way to visualize a pivoted matrix.
+- If the data were too large, you might consider using a log scale on the values before plotting to compress the color range.
+- Ensure the `aggfunc='sum'` matches the intended aggregation for the flight data.
+
+
+TIER 2: MEDIUM (two concepts, small subplot)
+
+
+7)Assumptions:
+- The `iris` dataset is available via `seaborn.load_dataset('iris')`.
+- The relevant columns are `sepal_length` (the value) and `species` (the grouping variable).
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy import stats
+
+# Load the dataset
+iris = sns.load_dataset('iris')
+
+# Determine the shared y-axis range for sepal_length
+min_val = iris['sepal_length'].min()
+max_val = iris['sepal_length'].max()
+
+# Create the 1x2 subplot figure
+fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+fig.suptitle("Sepal Length Distribution by Species", fontsize=16)
+
+# Left subplot: Box plot
+sns.boxplot(data=iris, x='species', y='sepal_length', ax=axes[0])
+axes[0].set_title('Box Plot')
+axes[0].set_xlabel('Species')
+axes[0].set_ylabel('Sepal Length')
+
+# Right subplot: Violin plot (using seaborn)
+sns.violinplot(data=iris, x='species', y='sepal_length', ax=axes[1])
+axes[1].set_title('Violin Plot')
+axes[1].set_xlabel('Species')
+axes[1].set_ylabel('Sepal Length')
+
+# Apply the shared y-axis range to both plots
+axes[0].set_ylim(min_val - 0.1, max_val + 0.1)
+axes[1].set_ylim(min_val - 0.1, max_val + 0.1)
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout for suptitle
+plt.show()
+```
+
+Notes:
+- Using `plt.subplots` allows for precise control over the layout and shared elements.
+- Determining the global min/max of `sepal_length` ensures the y-axis scale is consistent across both visualizations, aiding comparison.
+- Box plots show quartiles and outliers, while violin plots show the full probability density function (KDE) of the data.
+
+
+8)Assumptions:
+- The `iris` dataset is available and contains features including `petal_length` and a categorical species column.
+- The species are 'setosa', 'versicolor', and 'virginica'.
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from scipy.stats import gaussian_kde
+from sklearn.datasets import load_iris
+
+# Load the iris dataset
+iris = load_iris()
+df = pd.DataFrame(data=iris.data, columns=iris.feature_names)
+df['species'] = iris.target_names[iris.target]
+
+# Define the groups and the value column
+groups = df['species'].unique()
+value_col = 'petal length (cm)'
+
+# Set up the figure and axes
+fig, ax = plt.subplots(figsize=(10, 6))
+
+# Determine the range of petal lengths for consistent plotting
+min_val = df[value_col].min()
+max_val = df[value_col].max()
+x_range = np.linspace(min_val, max_val, 500)
+
+# Plotting the manual violin plots
+for i, group in enumerate(groups):
+    # 1. Extract data for the current group
+    group_data = df[df['species'] == group][value_col]
+
+    # 2. Calculate KDE
+    kde = gaussian_kde(group_data)
+
+    # 3. Calculate density values over the defined range
+    dens = kde(x_range)
+
+    # 4. Plot the mirrored density using fill_betweenx
+    # The density is plotted around the position 'i'
+    ax.fill_betweenx(i, dens, alpha=0.4, label=group)
+
+# Styling the plot
+ax.set_xticks(range(len(groups)))
+ax.set_xticklabels(groups)
+ax.set_xlabel("Species")
+ax.set_ylabel("Density of Petal Length")
+ax.set_title("Manual Violin Plot of Petal Length by Iris Species")
+ax.grid(axis='y', linestyle='--', alpha=0.7)
+
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- The density is calculated using `gaussian_kde` and then plotted using `fill_betweenx` centered at the index `i` corresponding to the species group.
+- The x-axis ticks are set to represent the species names for clear labeling.
+- If you were to use a different feature (e.g., sepal width), simply change `value_col` accordingly.
+
+
+9)Assumptions:
+- The `iris` dataset is loaded from seaborn.
+- The columns are named `sepal_width` and `species`.
+
+```python
+import seaborn as sns
+import matplotlib.pyplot as plt
+import joypy
+import pandas as pd
+
+# Load the iris dataset
+iris = sns.load_dataset('iris')
+
+# Create the ridgeline plot
+fig, ax = plt.subplots(figsize=(10, 6))
+joypy.joyplot(iris, by='species', column='sepal_width', overlap=0.7, ax=ax)
+
+# Set the title
+plt.suptitle("Ridgeline Plot of Sepal Width by Iris Species", fontsize=16)
+plt.tight_layout(rect=[0, 0, 1, 0.96]) # Adjust layout for suptitle
+plt.show()
+```
+
+Notes:
+- `joypy.joyplot` is the most direct way to create a ridgeline plot.
+- Setting `overlap=0.7` ensures the curves intersect significantly, highlighting shared distributions.
+- If `joypy` were unavailable, stacking `scipy.stats.gaussian_kde` curves with vertical offsets would be the manual alternative.
+
+
+10)Assumptions:
+- The astronaut image is the standard image provided by `skimage.data.astronaut()`.
+- The visualization requires standard matplotlib and skimage functions.
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from skimage import data, color, img_as_float
+
+# 1. Load and convert the image
+img_uint8 = data.astronaut()
+img = img_as_float(img_uint8)
+
+# 2. Split RGB channels
+R = img[..., 0]
+G = img[..., 1]
+B = img[..., 2]
+
+# 3. Convert RGB to HSV
+hsv = color.rgb2hsv(img)
+
+# 4. Split HSV channels
+H = hsv[..., 0]
+S = hsv[..., 1]
+V = hsv[..., 2]
+
+# 5. Collect all channels and their labels
+channels = [R, G, B, H, S, V]
+labels = ['R', 'G', 'B', 'H', 'S', 'V']
+
+# 6. Create the 2x3 grid
+fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+axes = axes.flatten() # Flatten the 2x3 array of axes for easy iteration
+
+# 7. Display each channel
+for i, channel in enumerate(channels):
+    ax = axes[i]
+    # Display as grayscale
+    ax.imshow(channel, cmap='gray')
+    ax.set_title(labels[i])
+    ax.axis('off') # Hide axes ticks and labels
+
+plt.suptitle("Astronaut Image Channels (Grayscale)", fontsize=16)
+plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout for suptitle
+plt.show()
+```
+
+Notes:
+- `img_as_float()` is mandatory before `rgb2hsv` to ensure correct fractional hue values.
+- All channels are displayed using `cmap='gray'` to fulfill the grayscale requirement.
+- The `axes.flatten()` method simplifies the loop structure for iterating over the 2x3 subplot grid.
+
+
+11)Assumptions:
+- The visualization requires standard matplotlib and skimage libraries for color manipulation.
+- The base hue $h=0.08$ is used as specified.
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import skimage.color
+from matplotlib.patches import Rectangle
+
+# --- Setup ---
+base_hue = 0.08
+S = 0.65  # Saturation
+V = 0.9   # Value
+
+# --- Harmony Calculations ---
+
+# 1. Complementary (2 hues)
+h_comp = np.array([base_hue, np.mod(base_hue + 0.5, 1.0)])
+colors_comp = [skimage.color.hsv2rgb([h, S, V]) for h in h_comp]
+
+# 2. Triadic (3 hues)
+h_tri = np.array([base_hue, np.mod(base_hue + 1/3, 1.0), np.mod(base_hue + 2/3, 1.0)])
+colors_tri = [skimage.color.hsv2rgb([h, S, V]) for h in h_tri]
+
+# 3. Analogous (3 hues)
+h_ana = np.array([base_hue, np.mod(base_hue + 1/12, 1.0), np.mod(base_hue - 1/12, 1.0)])
+colors_ana = [skimage.color.hsv2rgb([h, S, V]) for h in h_ana]
+
+# --- Plotting ---
+fig, axes = plt.subplots(3, 1, figsize=(8, 6), sharex=True)
+fig.suptitle("Color Harmony Palettes based on Base Hue h=0.08", fontsize=14)
+
+# Helper function to draw swatches
+def draw_swatches(ax, colors, title):
+    ax.set_title(title, fontsize=12)
+    swatch_rects = []
+    for i, color in enumerate(colors):
+        # Create a rectangle patch
+        rect = Rectangle((i, 0), 1, 1, color=color)
+        ax.add_patch(rect)
+        swatch_rects.append(rect)
+    
+    # Set limits and remove axis clutter
+    ax.set_xlim(-0.5, len(colors) - 0.5)
+    ax.set_ylim(0, 1)
+    ax.axis('off')
+    return ax
+
+# Plot Complementary
+ax0 = draw_swatches(axes[0], colors_comp, "Complementary Harmony")
+
+# Plot Triadic
+ax1 = draw_swatches(axes[1], colors_tri, "Triadic Harmony")
+
+# Plot Analogous
+ax2 = draw_swatches(axes[2], colors_ana, "Analogous Harmony")
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout for suptitle
+plt.show()
+```
+
+Notes:
+- The `Rectangle` patch is used to represent the color swatches within each subplot.
+- `plt.tight_layout` is crucial here to prevent the subplot titles from overlapping the main figure title.
+- Ensure S and V are kept constant across all harmonies to compare the hue relationships accurately.
+
+12)Assumptions:
+- The `iris` dataset contains four numeric features: `sepal_length`, `sepal_width`, `petal_length`, and `petal_width`.
+- The correlation matrix will be 4x4.
+
+```python
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
+
+# Load the iris dataset
+iris = sns.load_dataset('iris')
+
+# Calculate the correlation matrix
+corr_matrix = iris.corr()
+
+# Define the custom divergent colormap (Blue -> White -> Red)
+# Stops: (0, 'blue'), (0.5, 'white'), (1, 'red')
+# Note: The stops must be normalized coordinates (0 to 1).
+# For a centered map, the middle point (0.5) corresponds to the center value (0).
+cmap_name = 'bwrd'
+custom_cmap = LinearSegmentedColormap.from_list(cmap_name, [
+    ('blue', (0, 0, 1)),  # Blue (low)
+    ('white', (1, 1, 1)), # White (center)
+    ('red', (1, 0, 0))   # Red (high)
+])
+
+# Create the heatmap
+plt.figure(figsize=(8, 6))
+sns.heatmap(
+    corr_matrix,
+    annot=True,           # Annotate cells with correlation values
+    cmap=custom_cmap,     # Apply the custom divergent colormap
+    center=0,             # Center the colormap at 0
+    fmt=".2f",            # Format annotations to two decimal places
+    linewidths=.5,        # Add lines between cells for clarity
+    cbar_kws={'label': 'Correlation Coefficient'}
+)
+
+plt.title('Correlation Heatmap of Iris Features')
+plt.xlabel('Features')
+plt.ylabel('Features')
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- `sns.heatmap` is the appropriate tool for visualizing correlation matrices.
+- `LinearSegmentedColormap` allows precise control over the divergent color gradient centered at 0.
+- Setting `center=0` ensures that correlations close to zero are represented by the 'white' color in the custom map.
+
+
+13)Assumptions:
+- The matrix size is exactly 30x30.
+- The random matrix follows a standard normal distribution (mean 0, std 1).
+- Outliers are injected at 5 distinct, randomly chosen positions, with values centered around 12.
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# 1. Generate the 30x30 random matrix
+rng = np.random.default_rng(0)
+M_raw = rng.normal(0, 1, size=(30, 30))
+
+# 2. Inject 5 outliers around value 12
+num_outliers = 5
+outlier_indices = rng.integers(0, 30, size=num_outliers, dtype=int)
+outlier_rows = rng.integers(0, 30, size=num_outliers, dtype=int)
+outlier_cols = rng.integers(0, 30, size=num_outliers, dtype=int)
+
+for i in range(num_outliers):
+    r, c = outlier_rows[i], outlier_cols[i]
+    # Inject a value around 12 (e.g., 12 + small random noise)
+    M_raw[r, c] = 12 + rng.normal(0, 0.5)
+
+# 3. Calculate percentiles and clip the matrix
+lower_bound = np.quantile(M_raw, 0.02)
+upper_bound = np.quantile(M_raw, 0.98)
+M_clipped = np.clip(M_raw, lower_bound, upper_bound)
+
+# 4. Plotting
+fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+plt.suptitle("Heatmap Comparison: Raw vs. Clipped Matrix", fontsize=16)
+
+# Raw Heatmap (Left)
+sns.heatmap(M_raw, ax=axes[0], cmap="viridis", cbar_kws={'label': 'Value'})
+axes[0].set_title("Raw Matrix (with Outliers)")
+axes[0].set_xlabel("Column Index")
+axes[0].set_ylabel("Row Index")
+
+# Clipped Heatmap (Right)
+sns.heatmap(M_clipped, ax=axes[1], cmap="viridis", cbar_kws={'label': 'Value'})
+axes[1].set_title(f"Clipped Matrix (2nd-98th Percentile)\nBounds: [{lower_bound:.2f}, {upper_bound:.2f}]")
+axes[1].set_xlabel("Column Index")
+axes[1].set_ylabel("Row Index")
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+plt.show()
+```
+
+Notes:
+- Using `sns.heatmap` simplifies the visualization of the 2D data structure.
+- Clipping the matrix helps visualize the underlying distribution by mitigating the influence of extreme outliers.
+- If the outliers were more numerous, using a quantile-based color mapping (e.g., `vmin=lower_bound, vmax=upper_bound`) in `sns.heatmap` would be necessary for both plots.
+
+
+14)Assumptions:
+- The noisy 30x30 matrix is generated using standard normal distribution noise, simulating a typical noisy data matrix from previous labs.
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.colors import ListedColormap
+
+# 1. Regenerate the noisy 30x30 matrix
+np.random.seed(42)
+M_raw = np.random.randn(30, 30) * 5 + 10 # Simulate a noisy matrix
+
+# 2. Apply Quantile-Rank Normalization
+# Flatten the matrix, get the ranks (argsort().argsort()), and normalize to [0, 1]
+ranks = M_raw.flatten().argsort().argsort() / (M_raw.size - 1)
+M_quantile_normalized = ranks.reshape(M_raw.shape)
+
+# 3. Plot the heatmap
+plt.figure(figsize=(10, 9))
+# Use a standard colormap for visualization
+sns.heatmap(M_quantile_normalized, cmap='viridis', cbar=True, linewidths=0.5, linecolor='lightgray')
+
+plt.title("Quantile normalized [0,1]")
+plt.xlabel("Column Index")
+plt.ylabel("Row Index")
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+The quantile-rank normalization transforms the data such that the rank of each element is uniformly distributed between 0 and 1. This process effectively removes the influence of the original magnitude and variance, making underlying structural patterns (like clusters or gradients) more visible, even in highly noisy data.
+
+
+
+TIER 3: HARD (CT-style, table-described, multi-deliverable)
+15)Assumptions:
+- The dataset contains weight measurements for 4 species.
+- The measurements are approximately 80 per species.
+- Species 3 is intentionally generated to be bimodal.
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import gaussian_kde
+try:
+    import joypy
+except ImportError:
+    print("joypy not found. Using a simplified ridgeline approach.")
+    joypy = None
+
+# --- Data Synthesis ---
+N_per_species = 80
+np.random.seed(42)
+
+# Species 1: Normal distribution
+data_s1 = np.random.normal(loc=10, scale=2, size=N_per_species)
+
+# Species 2: Slightly skewed distribution
+data_s2 = np.random.normal(loc=15, scale=3, size=N_per_species)
+
+# Species 3: Bimodal distribution (two distinct peaks)
+data_s3_peak1 = np.random.normal(loc=8, scale=1.5, size=N_per_species // 2)
+data_s3_peak2 = np.random.normal(loc=18, scale=2, size=N_per_species // 2)
+data_s3 = np.concatenate([data_s3_peak1, data_s3_peak2])
+
+# Species 4: Uniform distribution
+data_s4 = np.random.uniform(low=5, high=25, size=N_per_species)
+
+# Create DataFrame
+df = pd.DataFrame({
+    'Weight': np.concatenate([data_s1, data_s2, data_s3, data_s4]),
+    'Species': ['S1'] * N_per_species + ['S2'] * N_per_species + ['S3'] * N_per_species + ['S4'] * N_per_species
+})
+
+# --- Plotting ---
+fig, axes = plt.subplots(1, 3, figsize=(20, 6))
+fig.suptitle("Weight Distributions Across Four Fish Species", fontsize=16)
+
+# 1. Box Plot
+sns.boxplot(data=df, x='Species', y='Weight', ax=axes[0])
+axes[0].set_title('Box Plot')
+axes[0].set_xlabel('Species')
+axes[0].set_ylabel('Weight')
+
+# 2. Manual Violin Plot (using KDE)
+# We iterate over the species groups to plot the KDE manually
+for i, species in enumerate(df['Species'].unique()):
+    vals = df[df['Species'] == species]['Weight'].values
+    
+    # Calculate KDE
+    kde = gaussian_kde(vals)
+    xs = np.linspace(vals.min(), vals.max(), 200)
+    dens = kde(xs)
+    
+    # Normalize density and scale for visualization
+    dens = dens / dens.max() * 0.4
+    
+    # Plot the density curve (violin shape)
+    axes[1].fill_betweenx(xs, i - dens, i + dens, alpha=0.5, label=species)
+
+axes[1].set_title('Manual Violin Plot (KDE)')
+axes[1].set_xticks(range(len(df['Species'].unique())))
+axes[1].set_xticklabels(df['Species'].unique())
+axes[1].set_xlabel('Species')
+axes[1].set_ylabel('Weight')
+axes[1].legend(loc='upper right')
+
+
+# 3. Ridgeline Plot
+if joypy:
+    # Use joypy for the ridgeline plot
+    joypy.joyplot(df, by='Species', column='Weight', kind='kde', overlap=0.5, ax=axes[2])
+    axes[2].set_title('Ridgeline Plot (Joypy)')
+    axes[2].set_xlabel('Species')
+    axes[2].set_ylabel('Weight')
+else:
+    # Fallback: Stack KDE curves manually if joypy is missing
+    unique_species = df['Species'].unique()
+    for i, species in enumerate(unique_species):
+        vals = df[df['Species'] == species]['Weight'].values
+        kde = gaussian_kde(vals)
+        xs = np.linspace(vals.min(), vals.max(), 200)
+        dens = kde(xs)
+        
+        # Scale and offset the density curve
+        dens = dens / dens.max() * 0.4
+        
+        # Plot the curve with vertical offset
+        axes[2].plot(xs, dens + i * 0.4, linewidth=2, label=species)
+
+    axes[2].set_title('Ridgeline Plot (Manual Fallback)')
+    axes[2].set_xlabel('Weight')
+    axes[2].set_ylabel('Species Index')
+    axes[2].legend(loc='upper right')
+
+
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+The Ridgeline plot (or the manual KDE visualization) best reveals the bimodality. Since it displays the full probability density function (PDF) for each group, the two distinct peaks in Species S3 are clearly visible as two separate, high-density curves, whereas the box plot only shows the quartiles and median, and the violin plot's density scaling might obscure the separation if the peaks are close.
+
+
+
+16)Assumptions:
+- The astronaut image is loaded directly from `skimage.data.astronaut()`.
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from skimage import data, color, img_as_float
+from matplotlib.colors import ListedColormap
+import math
+
+# 1. Load and prepare the image
+img_uint8 = data.astronaut()
+img_float = img_as_float(img_uint8)
+
+# 2. Compute per-pixel hue
+hsv = color.rgb2hsv(img_float)
+H = hsv[..., 0]
+
+# 3. Find the most common hue rounded to the nearest 0.05 bin
+# Scale by 20 (since 1/0.05 = 20), round, and scale back.
+binned_hues = np.round(H * 20).astype(int) / 20.0
+
+# Calculate the mode (most common value)
+# Using unique and counting occurrences
+unique_hues, counts = np.unique(binned_hues, return_counts=True)
+most_common_hue = unique_hues[np.argmax(counts)]
+
+print(f"Most common hue (rounded to 0.05): {most_common_hue:.2f}")
+
+# 4. Generate the triadic palette
+h_base = most_common_hue
+h_triadic = [h_base, h_base + 1/3, h_base + 2/3]
+
+# Wrap hues using np.mod(h, 1.0)
+h_wrapped = np.mod(h_triadic, 1.0)
+
+# Convert hues back to RGB colors (S=0.65, V=0.9 for visibility)
+palette_rgb = [color.hsv2rgb([h, 0.65, 0.9]) for h in h_wrapped]
+
+# 5. Display the results
+fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+plt.suptitle("Astronaut Image vs. Triadic Hue Palette", fontsize=16)
+
+# Subplot 1: Original Image
+axes[0].imshow(img_uint8)
+axes[0].set_title("Original Astronaut Image")
+axes[0].axis('off')
+
+# Subplot 2: Triadic Palette
+ax_palette = axes[1]
+ax_palette.set_title("Triadic Palette (Base Hue: {:.2f})".format(most_common_hue))
+ax_palette.set_xlim(0, len(palette_rgb))
+ax_palette.set_ylim(0, 1)
+ax_palette.axis('off')
+
+# Draw the color swatches
+for i, c in enumerate(palette_rgb):
+    # Rectangle takes (x, y), width, height, color
+    ax_palette.add_patch(plt.Rectangle((i, 0), 1, 1, color=c))
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout for suptitle
+plt.show()
+```
+
+Notes:
+- The most common hue is found by binning the continuous hue values to 0.05 precision before calculating the mode.
+- The triadic palette is generated by adding 1/3 and 2/3 to the base hue and wrapping the results using `np.mod(h, 1.0)`.
+- The palette is displayed using `plt.Rectangle` patches, which is the standard way to visualize discrete color swatches in matplotlib.
+
+17)Assumptions:
+- The input is a 5x5 numeric matrix.
+- The values range approximately from -3 to 8.
+- The custom colormap must be anchored at the specified quantiles.
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.colors import LinearSegmentedColormap
+
+# 1. Synthesize 5x5 matrix with values ranging roughly from -3 to 8
+np.random.seed(42)
+# Generate data centered around 2.5 with a standard deviation that allows for the required range
+data = np.random.normal(loc=2.5, scale=2.5, size=(5, 5))
+
+# Ensure the range is roughly met by clipping or adjusting if necessary, 
+# but for a plausible synthetic matrix, normal distribution is sufficient.
+# We will use the generated data.
+M = data
+
+# 2. Define quantiles and colors
+quantiles = [0.05, 0.4, 0.6, 0.95]
+colors = ['navy', 'lightblue', 'lightcoral', 'darkred']
+
+# 3. Calculate quantiles of the flattened matrix
+M_flat = M.flatten()
+# Use np.quantile to find the exact values corresponding to the specified quantiles
+q_values = np.quantile(M_flat, quantiles)
+
+# 4. Build the custom colormap
+# The stops must be defined as ((q - vmin) / (vmax - vmin), color)
+# Here, q is the quantile value, and vmin/vmax are the actual min/max of the data.
+vmin = M_flat.min()
+vmax = M_flat.max()
+
+# Calculate normalized positions for the stops
+normalized_stops = [((q - vmin) / (vmax - vmin), color) for q, color in zip(q_values, colors)]
+
+# Create the LinearSegmentedColormap
+cmap_name = 'quantile_anchored'
+custom_cmap = LinearSegmentedColormap.from_list(cmap_name, colors, N=256)
+
+# 5. Plot the heatmap
+plt.figure(figsize=(8, 7))
+sns.heatmap(M, cmap=custom_cmap, vmin=vmin, vmax=vmax, annot=True, fmt=".1f")
+plt.title('Quantile-Anchored Heatmap (5x5 Matrix)')
+plt.xlabel('Column Index')
+plt.ylabel('Row Index')
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- The custom colormap is built by normalizing the specified quantile values (0.05, 0.4, 0.6, 0.95) relative to the data's actual minimum and maximum.
+- Using `vmin` and `vmax` in `sns.heatmap` ensures the custom colormap applies correctly across the full data range.
+- If the data were highly skewed, using the quantile-anchored map would provide a more perceptually uniform visualization than a standard linear map.
+
+
+18)Assumptions:
+- The `tips` dataset is available via `sns.load_dataset('tips')`.
+- The numeric columns in the `tips` dataset are `total_bill`, `tip`, and `size`.
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.colors import LinearSegmentedColormap
+
+# Load the tips dataset
+tips = sns.load_dataset('tips')
+
+# Select numeric columns
+numeric_df = tips.select_dtypes(include=np.number)
+
+# Calculate matrices
+correlation_matrix = numeric_df.corr()
+covariance_matrix = numeric_df.cov()
+
+# Define the divergent colormap (Blue -> White -> Red)
+divergent_cmap = LinearSegmentedColormap.from_list(
+    'divergent', 
+    [(0, 'blue'), (0.5, 'white'), (1, 'red')]
+)
+
+# Set up the 1x2 subplot
+fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+plt.suptitle("Comparison of Correlation and Covariance Heatmaps for Tips Data", fontsize=16)
+
+# 1. Correlation Heatmap
+sns.heatmap(
+    correlation_matrix, 
+    annot=True, 
+    cmap=divergent_cmap, 
+    center=0, 
+    ax=axes[0],
+    fmt=".2f"
+)
+axes[0].set_title("Correlation Heatmap")
+axes[0].set_xlabel("Variables")
+axes[0].set_ylabel("Variables")
+
+# 2. Covariance Heatmap
+sns.heatmap(
+    covariance_matrix, 
+    annot=True, 
+    cmap=divergent_cmap, 
+    center=0, 
+    ax=axes[1],
+    fmt=".2f"
+)
+axes[1].set_title("Covariance Heatmap")
+axes[1].set_xlabel("Variables")
+axes[1].set_ylabel("Variables")
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout for suptitle
+plt.show()
+```
+
+Notes:
+- The `center=0` argument is crucial for the divergent palette, ensuring that zero values map to white.
+- Covariance values are generally much larger in magnitude than correlation values, so the annotations might appear scaled differently.
+- If the data were highly skewed, using a quantile-based scaling (instead of raw matrix values) might improve visualization clarity.
+
+
+19)Assumptions:
+- The matrix size is 50x50.
+- The noise distribution is centered around 0.
+- The outliers are significantly larger than the noise.
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.colors import LinearSegmentedColormap
+
+# --- Data Generation ---
+N = 50
+M = np.random.normal(0, 1, (N, N)) # Base noise
+# Introduce 5% outliers
+num_outliers = int(N*N * 0.05)
+outlier_indices = np.random.choice(N*N, num_outliers, replace=False)
+M.flat[outlier_indices] = np.random.uniform(50, 100, num_outliers)
+M_raw = M
+
+# --- Transformation Calculations ---
+# 1. Clipped Matrix (2/98 percentile)
+q_low = np.quantile(M_raw, 0.02)
+q_high = np.quantile(M_raw, 0.98)
+M_clipped = np.clip(M_raw, q_low, q_high)
+
+# 2. Hybrid Transformed Matrix (sign(x) * log1p(|x|))
+M_hybrid = np.sign(M_raw) * np.log1p(np.abs(M_raw))
+
+# --- Color Map Setup ---
+# Divergent palette: Blue (low) -> White (center) -> Red (high)
+cmap_name = 'bwrd'
+divergent_cmap = LinearSegmentedColormap.from_list(cmap_name, [(0,'blue'),(0.5,'white'),(1,'red')])
+
+# --- Plotting ---
+fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+fig.suptitle("Matrix Visualization: Raw, Clipped, and Hybrid Transformation", fontsize=16)
+
+# Plot 1: Raw Matrix
+sns.heatmap(M_raw, cmap=divergent_cmap, center=0, ax=axes[0], cbar_kws={'label': 'Raw Value'})
+axes[0].set_title("Raw Matrix")
+axes[0].set_xlabel("Column Index")
+axes[0].set_ylabel("Row Index")
+
+# Plot 2: Clipped Matrix
+sns.heatmap(M_clipped, cmap=divergent_cmap, center=0, ax=axes[1], cbar_kws={'label': 'Clipped Value'})
+axes[1].set_title(f"Clipped Matrix (2nd to 98th Percentile)")
+axes[1].set_xlabel("Column Index")
+axes[1].set_ylabel("Row Index")
+
+# Plot 3: Hybrid Matrix
+sns.heatmap(M_hybrid, cmap=divergent_cmap, center=0, ax=axes[2], cbar_kws={'label': 'Hybrid Value'})
+axes[2].set_title("Hybrid Transformation (sign(x) * log1p(|x|))")
+axes[2].set_xlabel("Column Index")
+axes[2].set_ylabel("Row Index")
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust layout for suptitle
+plt.show()
+```
+
+Notes:
+- The `center=0` argument is crucial for the divergent palette to correctly map zero to white/neutral color.
+- The hybrid transformation compresses the extreme outliers while preserving the sign and relative magnitude of the noise.
+- If the noise distribution is highly skewed, consider using the Quantile transformation instead of simple clipping.
+
+20)Assumptions:
+- The `tips` dataset is available via `seaborn.load_dataset`.
+- The `joypy` library is installed and available for use.
+
+```python
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+import joypy
+
+# Load the tips dataset
+df = sns.load_dataset("tips")
+
+# Set up the figure and subplots (2 rows, 1 column, sharing the x-axis)
+fig, axes = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
+plt.suptitle("Total Bill Distribution by Day: Ridgeline vs. Box Plot", fontsize=16)
+
+# --- Top Panel: Ridgeline Plot (Joyplot) ---
+# Plot the ridgeline plot on the top subplot (axes[0])
+joypy.joyplot(
+    df,
+    by='day',
+    column='total_bill',
+    overlap=0.6,
+    ax=axes[0],
+    title="Ridgeline Plot of Total Bill by Day"
+)
+axes[0].set_ylabel("Total Bill ($)")
+
+# --- Bottom Panel: Box Plot (Seaborn) ---
+# Plot the box plot on the bottom subplot (axes[1])
+sns.boxplot(
+    data=df,
+    x='day',
+    y='total_bill',
+    ax=axes[1],
+    palette="viridis"
+)
+axes[1].set_title("Box Plot of Total Bill by Day")
+axes[1].set_xlabel("Day")
+axes[1].set_ylabel("Total Bill ($)")
+
+# Adjust layout to prevent overlap
+plt.tight_layout(rect=[0, 0.03, 1, 0.95]) # Adjust rect to make space for suptitle
+plt.show()
+```
+
+Notes:
+- The `sharex=True` argument in `plt.subplots` ensures both plots use the same x-axis scale and ticks.
+- The ridgeline plot (joypy) is excellent for visualizing the distribution shape across categories, while the box plot provides summary statistics (median, quartiles, outliers).
+- If `joypy` is unavailable, you would need to manually stack `scipy.stats.gaussian_kde` curves with vertical offsets per day.
+
+
+21)Assumptions:
+- The astronaut image is loaded using `skimage.data.astronaut()`.
+- The hue channel (H) is the first channel (index 0) in the HSV representation.
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from skimage import data, color, img_as_float
+from matplotlib.colors import ListedColormap
+
+# 1. Load and convert image to float
+img_rgb = data.astronaut()
+img_float = img_as_float(img_rgb)
+
+# 2. Convert RGB to HSV
+img_hsv = color.rgb2hsv(img_float)
+H = img_hsv[..., 0] # Hue channel
+
+# 3. Build the boolean mask (Hue between 0.0 and 0.1)
+hue_min = 0.0
+hue_max = 0.1
+mask = (H >= hue_min) & (H <= hue_max)
+
+# 4. Create the masked image (set non-selected pixels to black/0)
+img_masked = np.zeros_like(img_float)
+img_masked[mask] = img_float[mask]
+
+# 5. Display the results
+fig, axes = plt.subplots(1, 3, figsize=(15, 5))
+plt.suptitle("Astronaut Image Analysis: Hue Masking (0.0 to 0.1)")
+
+# Original Image
+axes[0].imshow(img_float)
+axes[0].set_title("Original Image")
+axes[0].axis('off')
+
+# Boolean Mask
+# We use a custom colormap to visualize the boolean mask clearly
+cmap_mask = ListedColormap(['black', 'white'])
+axes[1].imshow(mask, cmap=cmap_mask)
+axes[1].set_title("Boolean Mask (Hue 0.0-0.1)")
+axes[1].axis('off')
+
+# Masked Image
+axes[2].imshow(img_masked)
+axes[2].set_title("Image Masked by Hue")
+axes[2].axis('off')
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+plt.show()
+```
+
+Notes:
+- The mask is created by directly indexing the Hue channel (index 0) of the HSV array.
+- The masked image is created by initializing a black array and only copying the original pixel values where the mask is True.
+- For visualizing the boolean mask, a custom `ListedColormap` is used to clearly distinguish selected (white) and unselected (black) pixels.
+
+22)Assumptions:
+- The `iris` dataset contains 'sepal_width' and 'species' columns.
+- The `species` column has exactly 3 unique categories.
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.colors import ListedColormap
+from skimage import color
+
+# 1. Load the dataset
+iris = sns.load_dataset('iris')
+
+# 2. Define parameters
+hues = np.array([0.0, 0.2, 0.4, 0.6, 0.8])
+saturation = 0.65
+value = 0.9
+
+# 3. Generate the 5 colors (RGB format)
+# H, S, V must be in [0, 1]
+hsv_colors = np.array([hues, saturation, value]).T
+rgb_colors = color.hsv2rgb(hsv_colors)
+
+# 4. Create the ListedColormap
+# We use all 5 colors, but only the first 3 will be used for the 3 species
+custom_palette = ListedColormap(rgb_colors[:3])
+
+# 5. Plot the boxplot
+plt.figure(figsize=(8, 6))
+ax = sns.boxplot(data=iris, x='species', y='sepal_width', palette=custom_palette)
+
+# Set titles and labels
+plt.title('Sepal Width Distribution by Species (Custom Palette)')
+plt.xlabel('Species')
+plt.ylabel('Sepal Width')
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- The `ListedColormap` is created from the first three generated RGB colors to match the three species categories.
+- Using `sns.boxplot` with a custom `palette` directly applies the color mapping based on the categorical variable ('species').
+- Ensure the hues are fractional values between 0 and 1 for `skimage.color.hsv2rgb`.
+
+TIER 4: REALLY REALLY HARD (adversarial decoys + composites)
+
+
+23)Assumptions:
+- The base hue for all palettes is $h_{base} = 0.3$.
+- The palettes will be displayed in a $3 \times 1$ subplot structure.
+- The swatches for each palette will be drawn using rectangles.
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from skimage import color
+
+# Base hue in fractional form [0, 1]
+h_base = 0.3
+
+# --- Palette Generation ---
+
+# 1. Complementary Harmony (180 degrees = 0.5 fraction)
+# H_complementary = H_base + 0.5
+h_comp = [h_base, np.mod(h_base + 0.5, 1.0)]
+cols_comp = [color.hsv2rgb([h, 0.65, 0.9]) for h in h_comp]
+
+# 2. Triadic Harmony (120 degrees = 1/3 fraction)
+# H_triadic = H_base, H_base + 1/3, H_base + 2/3
+h_tri = [h_base, np.mod(h_base + 1/3, 1.0), np.mod(h_base + 2/3, 1.0)]
+cols_tri = [color.hsv2rgb([h, 0.65, 0.9]) for h in h_tri]
+
+# 3. Analogous Harmony (30 degrees = 1/12 fraction)
+# H_analogous = H_base, H_base + 1/12, H_base - 1/12
+h_ana = [h_base, np.mod(h_base + 1/12, 1.0), np.mod(h_base - 1/12, 1.0)]
+cols_ana = [color.hsv2rgb([h, 0.65, 0.9]) for h in h_ana]
+
+
+# --- Plotting Swatches ---
+
+fig, axes = plt.subplots(3, 1, figsize=(8, 5))
+fig.suptitle("Color Harmony Palettes (Base Hue: 0.3)", fontsize=14)
+
+palettes = {
+    "Complementary": cols_comp,
+    "Triadic": cols_tri,
+    "Analogous": cols_ana
+}
+
+for i, (name, cols) in enumerate(palettes.items()):
+    ax = axes[i]
+    
+    # Draw swatches
+    for j, c in enumerate(cols):
+        # Rectangle format: (x_start, y_start), width, height, color
+        ax.add_patch(plt.Rectangle((j, 0), 1, 1, color=c))
+    
+    ax.set_xlim(0, len(cols))
+    ax.set_ylim(0, 1)
+    ax.set_xticks(np.arange(len(cols)))
+    ax.set_xticklabels([f"{name} Hue {j+1}"])
+    ax.set_yticks([])
+    ax.set_title(f"{name} Palette")
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+plt.show()
+```
+
+Notes:
+- Fractional offsets are easier because $180^\circ$ is exactly $0.5$ and $120^\circ$ is exactly $1/3$ in the $[0, 1]$ range, simplifying arithmetic.
+- The `np.mod(h, 1.0)` function is crucial for ensuring that hue values wrap correctly back into the $[0, 1]$ range, regardless of whether the offset is positive or negative.
+- The constant $S=0.65$ and $V=0.9$ were chosen to maintain high saturation and brightness for clear color differentiation.
+
+
+24)Assumptions:
+- The `iris` dataset is loaded via `seaborn.load_dataset`.
+- All columns in the `iris` dataset are treated as numeric for normalization and heatmap generation.
+
+```python
+import numpy as np
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+
+# Load the iris dataset
+iris = sns.load_dataset('iris')
+
+# Select numeric columns (all columns in iris are numeric)
+data = iris.values
+
+# Min-Max Normalization (Column-wise)
+# X_norm = (X - X_min) / (X_max - X_min)
+data_normalized = np.zeros_like(data, dtype=float)
+for i in range(data.shape[1]):
+    col = data[:, i]
+    min_val = col.min()
+    max_val = col.max()
+    # Handle case where max == min to avoid division by zero
+    if max_val == min_val:
+        data_normalized[:, i] = 0.0
+    else:
+        data_normalized[:, i] = (col - min_val) / (max_val - min_val)
+
+# Convert normalized data back to DataFrame for easier plotting labels
+df_normalized = pd.DataFrame(data_normalized, columns=iris.columns)
+
+# Create the heatmap of the normalized data
+plt.figure(figsize=(8, 7))
+
+# Use a sequential colormap (e.g., 'Blues')
+# Since the data is normalized [0, 1], we use a continuous sequential map.
+heatmap = sns.heatmap(
+    df_normalized,
+    cmap="Blues",
+    annot=True,
+    fmt=".2f", # Format annotations to two decimal places
+    linewidths=.5,
+    cbar_kws={'label': 'Normalized Value [0, 1]'}
+)
+
+plt.title("Heatmap of Min-Max Normalized Iris Features")
+plt.xlabel("Feature")
+plt.ylabel("Observation")
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- The normalization is applied column-wise, ensuring each feature scales independently to the [0, 1] range.
+- Using `cmap="Blues"` provides the required sequential palette, where darker blue indicates higher normalized values.
+- Since the data is observation-by-feature, the heatmap shows the normalized value of each feature for every single row (observation).
+
+
+25)Assumptions:
+- The four stores are Alpha, Beta, Gamma, and Delta.
+- The column names are `store`, `monthly_sales`, `customer_count`, and `satisfaction_score`.
+- `monthly_sales` is in thousands, and `satisfaction_score` is 1-10.
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from skimage import color
+from skimage import img_as_float
+
+# 1. Data Synthesis (4 rows, 4 columns)
+data = {
+    'store': ['Alpha', 'Beta', 'Gamma', 'Delta'],
+    'monthly_sales': [120, 150, 90, 180],
+    'customer_count': [800, 1100, 650, 1300],
+    'satisfaction_score': [7.5, 9.0, 6.0, 8.5]
+}
+df = pd.DataFrame(data)
+
+# 2. Triadic Palette Generation (Base hue 0.55)
+base_hue = 0.55
+hues = [base_hue, base_hue + 1/3, base_hue + 2/3]
+# Ensure hues wrap correctly (though for triadic, they should be fine)
+hues = np.mod(hues, 1.0)
+# Convert HSV to RGB for plotting
+triadic_colors = [color.hsv2rgb([h, 0.65, 0.9]) for h in hues]
+
+# 3. Plotting Setup
+fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+plt.suptitle("Retail Store Performance Comparison", fontsize=16)
+
+# --- Left Subplot: Grouped Bar (Sales vs Customers) ---
+# We use the triadic colors to cycle through the stores
+store_names = df['store'].tolist()
+x_positions = np.arange(len(store_names))
+bar_width = 0.35
+
+# Plot Monthly Sales
+rects1 = axes[0].bar(x_positions - bar_width/2, df['monthly_sales'], bar_width, 
+                     label='Monthly Sales (k)', color=triadic_colors[0])
+
+# Plot Customer Count
+rects2 = axes[0].bar(x_positions + bar_width/2, df['customer_count'], bar_width, 
+                     label='Customer Count', color=triadic_colors[1])
+
+axes[0].set_xticks(x_positions)
+axes[0].set_xticklabels(store_names)
+axes[0].set_xlabel("Store Location")
+axes[0].set_ylabel("Metric Value")
+axes[0].set_title("Sales vs Customer Count by Store")
+axes[0].legend()
+
+# --- Right Subplot: Horizontal Lollipop (Satisfaction) ---
+# Lollipop plot: line connecting zero to point, plus a marker
+y_positions = np.arange(len(store_names))
+# Plot the line (the stick)
+axes[1].plot(df['satisfaction_score'], y_positions, marker='o', linestyle='-', 
+             color=triadic_colors[2], markersize=8, linewidth=2)
+# Plot the marker (the head)
+axes[1].scatter(df['satisfaction_score'], y_positions, marker='o', s=100, 
+                 color=triadic_colors[2], zorder=3)
+
+axes[1].set_yticks(y_positions)
+axes[1].set_yticklabels(store_names)
+axes[1].set_xlabel("Satisfaction Score (1-10)")
+axes[1].set_title("Store Satisfaction Score")
+axes[1].invert_yaxis() # To match typical chart layout (Alpha at top)
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+plt.show()
+```
+
+Notes:
+- For the grouped bar, I used `np.arange` and offset the bars to achieve the grouping effect, cycling through the triadic colors.
+- The lollipop plot is achieved by plotting a line from the y-axis (0) to the data point, followed by a scatter plot to emphasize the marker.
+- If the data were truly continuous, a violin plot or KDE plot would be more appropriate for satisfaction, but since it's a single summary row, the lollipop is the best visualization.
+
+
+26)Assumptions:
+- The `iris` dataset contains columns: `sepal_length`, `sepal_width`, `petal_length`, `petal_width`, and `species`.
+- The species names are categorical and will be used for grouping.
+- The correlation heatmap will use all four numeric columns.
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from skimage import color
+from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+try:
+    import joypy
+except ImportError:
+    print("Warning: joypy not found. Ridgeline plot (2,1) will be skipped.")
+    joypy = None
+
+# Load the iris dataset
+iris = sns.load_dataset('iris')
+
+# --- Figure Setup ---
+fig, axes = plt.subplots(2, 2, figsize=(18, 14))
+plt.suptitle("Iris - Lab 04 mashup", fontsize=16)
+
+# --- (1,1) Box plot of sepal_length by species ---
+sns.boxplot(data=iris, x='species', y='sepal_length', ax=axes[0, 0])
+axes[0, 0].set_title('Sepal Length by Species (Box Plot)')
+axes[0, 0].set_xlabel('Species')
+axes[0, 0].set_ylabel('Sepal Length (cm)')
+
+# --- (1,2) Correlation heatmap of numeric columns, divergent palette ---
+numeric_cols = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width']
+corr_matrix = iris[numeric_cols].corr()
+
+# Define divergent color map (Blue -> White -> Red)
+divergent_cmap = LinearSegmentedColormap.from_list(
+    'bwrd', [(0, 'blue'), (0.5, 'white'), (1, 'red')]
+)
+
+sns.heatmap(
+    corr_matrix,
+    annot=True,
+    cmap=divergent_cmap,
+    center=0,
+    fmt=".2f",
+    linewidths=.5,
+    cbar_kws={'label': 'Correlation Coefficient'}
+)
+axes[0, 1].set_title('Correlation Heatmap of Numeric Features')
+axes[0, 1].set_xlabel('Feature')
+axes[0, 1].set_ylabel('Feature')
+
+# --- (2,1) Joypy ridgeline of petal_length by species ---
+if joypy:
+    joypy.joyplot(
+        data=iris,
+        by='species',
+        column='petal_length',
+        kind='kde',
+        overlap=0.5,
+        ax=axes[1, 0]
+    )
+    axes[1, 0].set_title('Petal Length Ridgeline by Species')
+    axes[1, 0].set_xlabel('Petal Length (cm)')
+    axes[1, 0].set_ylabel('Species')
+else:
+    axes[1, 0].set_title('Ridgeline Plot (Joypy not available)')
+    axes[1, 0].text(0.5, 0.5, "Install joypy for this plot.", ha='center', va='center')
+
+
+# --- (2,2) Three color swatches representing the three species ---
+species_names = iris['species'].unique()
+hue_offsets = [0.0, 1/3, 2/3]
+cols = []
+
+# Build the palette using hue offsets
+for h in hue_offsets:
+    # Use a fixed saturation (0.65) and value (0.9) for visibility
+    rgb = color.hsv2rgb([h, 0.65, 0.9])
+    cols.append(rgb)
+
+# Draw the swatches
+ax_swatch = axes[1, 1]
+for i, color_rgb in enumerate(cols):
+    # Create a rectangle patch
+    rect = plt.Rectangle((i, 0), 1, 1, color=color_rgb)
+    ax_swatch.add_patch(rect)
+
+ax_swatch.set_xlim(0, len(cols))
+ax_swatch.set_ylim(0, 1)
+ax_swatch.axis('off')
+ax_swatch.set_title('Species Color Swatches (Hue Offsets)')
+
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- The divergent heatmap uses `center=0` to ensure colors transition smoothly from blue (negative correlation) through white (zero) to red (positive correlation).
+- For the ridgeline plot, `joypy` is used as requested; if it fails to install, a placeholder message is displayed in the subplot.
+- The color swatches use fractional hue offsets (0.0, 1/3, 2/3) as required by `skimage.color` functions.
+
+
+27)Assumptions:
+- The astronaut image is a standard RGB image (e.g., 512x512x3).
+- The heatmap will display the H channel values across the image pixels.
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from skimage import data, color, util
+from matplotlib.colors import ListedColormap
+
+# 1. Load and convert image
+img_rgb = data.astronaut()
+img_float = util.img_as_float(img_rgb)
+
+# 2. RGB -> HSV conversion
+img_hsv = color.rgb2hsv(img_float)
+H_channel = img_hsv[..., 0]
+
+# 3. Compute mean hue
+mean_hue = H_channel.mean()
+
+# 4. Define palettes based on mean_hue
+# Ensure hue wraps correctly using np.mod(h, 1.0)
+h_mean = np.mod(mean_hue, 1.0)
+
+# Complementary: [h, h+0.5]
+h_comp = np.mod([h_mean, h_mean + 0.5], 1.0)
+# Triadic: [h, h+1/3, h+2/3]
+h_tri = np.mod([h_mean, h_mean + 1/3, h_mean + 2/3], 1.0)
+# Analogous: [h, h+1/12, h-1/12]
+h_ana = np.mod([h_mean, h_mean + 1/12, h_mean - 1/12], 1.0)
+
+palettes = {
+    "Complementary": h_comp,
+    "Triadic": h_tri,
+    "Analogous": h_ana
+}
+
+# 5. Build color maps and plot
+fig, axes = plt.subplots(1, 3, figsize=(18, 6))
+fig.suptitle("Heatmap of Hue Channel (H) with Different Color Palettes", fontsize=16)
+
+# Normalize the H channel data for consistent heatmap scaling
+# We use the full range [0, 1] for the colormap mapping
+H_norm = H_channel
+
+for i, (name, hues) in enumerate(palettes.items()):
+    # Build the palette using HSV -> RGB conversion
+    # S=0.65, V=0.9 as per standard practice for color swatch generation
+    colors = [color.hsv2rgb([h, 0.65, 0.9]) for h in hues]
+    cmap = ListedColormap(colors)
+    
+    # Plot the heatmap
+    sns.heatmap(H_norm, cmap=cmap, ax=axes[i], cbar=True, 
+                vmin=0, vmax=1, square=True)
+    
+    axes[i].set_title(f"Palette: {name}")
+    axes[i].set_xlabel("X Pixels")
+    axes[i].set_ylabel("Y Pixels")
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+plt.show()
+```
+
+Notes:
+- The `ListedColormap` is created by converting the specific hue values (H) into RGB using `hsv2rgb` before passing them to the map.
+- We set `vmin=0` and `vmax=1` in `sns.heatmap` to ensure the H channel is mapped consistently across all three subplots, regardless of the custom colormap used.
+
+
+28)Assumptions:
+- The matrix size is exactly 40x40.
+- The outliers are generated randomly to ensure they are distinct and large.
+- The color mapping uses the 2nd and 98th percentiles of the matrix values as the anchors (vmin, vmax).
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
+
+# 1. Generate the 40x40 matrix with outliers
+N = 40
+M = np.random.rand(N, N) * 5  # Mostly small values (0 to 5)
+
+# Introduce 10 large outliers
+outlier_indices = np.random.choice(N * N, 10, replace=False)
+M.flat[outlier_indices] = np.random.rand(10) * 50 + 20 # Large values (20 to 70)
+
+# 2. Calculate quantiles for anchoring the color maps
+# We use the 2nd and 98th percentiles
+vmin = np.quantile(M, 0.02)
+vmax = np.quantile(M, 0.98)
+
+# 3. Define the two gradient colormaps using hue arithmetic
+# Hue ranges are [0, 1].
+# Cool-to-Warm (e.g., Blue/Cyan ~0.6 to Red/Orange ~0.05)
+# We define the gradient stops based on the quantiles (vmin, vmax)
+# Stop 1 (vmin): Cool hue (e.g., 0.6)
+# Stop 2 (0.5 quantile): Neutral/Mid hue (e.g., 0.3)
+# Stop 3 (vmax): Warm hue (e.g., 0.05)
+
+# Gradient 1: Cool (0.6) -> Warm (0.05)
+# Stops: (0, Cool_Hue), (0.5, Mid_Hue), (1, Warm_Hue)
+cmap_cool_to_warm = LinearSegmentedColormap.from_list(
+    'cool_to_warm', 
+    [
+        (vmin, 'hsv', [0.6, 0.65, 0.9]), # Cool start
+        (0.5, 'hsv', [0.3, 0.65, 0.9]), # Mid point
+        (vmax, 'hsv', [0.05, 0.65, 0.9]) # Warm end
+    ]
+)
+
+# Gradient 2: Complementary Swap (Warm (0.05) -> Cool (0.6))
+# This is the reverse of the first gradient
+cmap_warm_to_cool = LinearSegmentedColormap.from_list(
+    'warm_to_cool', 
+    [
+        (vmin, 'hsv', [0.05, 0.65, 0.9]), # Warm start
+        (0.5, 'hsv', [0.3, 0.65, 0.9]), # Mid point
+        (vmax, 'hsv', [0.6, 0.65, 0.9])  # Cool end
+    ]
+)
+
+# 4. Apply both to the same matrix in a 1x2 subplot
+fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+plt.suptitle("Quantile-Anchored Gradient Comparison", fontsize=16)
+
+# Subplot 1: Cool-to-Warm
+im1 = axes[0].imshow(M, cmap=cmap_cool_to_warm, vmin=vmin, vmax=vmax)
+axes[0].set_title("Cool-to-Warm Gradient (0.6 -> 0.05)")
+axes[0].set_xlabel("Column Index")
+axes[0].set_ylabel("Row Index")
+
+# Subplot 2: Warm-to-Cool
+im2 = axes[1].imshow(M, cmap=cmap_warm_to_cool, vmin=vmin, vmax=vmax)
+axes[1].set_title("Warm-to-Cool Gradient (0.05 -> 0.6)")
+axes[1].set_xlabel("Column Index")
+axes[1].set_ylabel("Row Index")
+
+plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+plt.show()
+```
+
+Notes:
+- The `LinearSegmentedColormap` is built using HSV values for the stops, ensuring the hue transitions correctly.
+- By setting `vmin` and `vmax` based on quantiles, the outliers influence the color mapping without dominating the entire gradient scale.
+- If the data distribution changes, adjust the `0.5` quantile stop to better represent the mid-range of your data.
+
+29)Assumptions:
+- The reaction times are positive values, suitable for log transformation.
+- The synthetic `condition` column has exactly 3 levels.
+- The total dataset size is 500 rows.
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import gaussian_kde
+
+# --- Data Synthesis ---
+N_total = 500
+N_conditions = 3
+N_per_condition = N_total // N_conditions
+
+# 1. Generate base skewed data (e.g., using an exponential distribution)
+np.random.seed(42)
+base_rt = np.random.exponential(scale=0.1, size=N_total)
+
+# 2. Create the condition column
+conditions = np.repeat([1, 2, 3], N_per_condition)
+df = pd.DataFrame({'condition': conditions, 'reaction_time': base_rt})
+
+# 3. Inject outliers (10% of total data, 50 points)
+n_outliers = int(0.10 * N_total)
+outlier_indices = np.random.choice(df.index, n_outliers, replace=False)
+# Outliers are 3x to 5x larger than the median of the base data
+median_rt = df['reaction_time'].median()
+outlier_values = median_rt * np.random.uniform(3, 5, n_outliers)
+df.loc[outlier_indices, 'reaction_time'] = outlier_values
+
+# --- Data Transformation ---
+# Transformation: sign(x) * log1p(|x|)
+# Since reaction_time > 0, this simplifies to np.log1p(reaction_time)
+df['transformed_rt'] = np.log1p(df['reaction_time'])
+
+# --- Plotting Setup ---
+fig, axes = plt.subplots(2, 3, figsize=(18, 10))
+plt.suptitle("Distribution Analysis: Raw vs. Log-Transformed Reaction Times", fontsize=16)
+
+# Function to plot the three distribution types for a given dataframe
+def plot_distributions(df, row_index, title_suffix):
+    
+    # 1. Box Plot (Seaborn)
+    sns.boxplot(data=df, x='condition', y='reaction_time' if row_index == 0 else 'transformed_rt', ax=axes[row_index, 0])
+    axes[row_index, 0].set_title(f'Box Plot ({title_suffix})')
+    axes[row_index, 0].set_xlabel('Condition')
+    axes[row_index, 0].set_ylabel('Reaction Time')
+
+    # 2. Manual Violin Plot (KDE density)
+    for i in range(N_conditions):
+        group_data = df[df['condition'] == i + 1]['reaction_time' if row_index == 0 else 'transformed_rt']
+        if len(group_data) > 0:
+            kde = gaussian_kde(group_data)
+            xs = np.linspace(group_data.min(), group_data.max(), 200)
+            dens = kde(xs)
+            # Normalize density and scale for visualization
+            dens = dens / dens.max() * 0.4 
+            
+            # Plot density centered at position i+1
+            axes[row_index, 1].fill_between(xs, i - dens, i + dens, alpha=0.4, label=f'C{i+1}')
+            axes[row_index, 1].set_xticks(np.arange(1, N_conditions + 1))
+            axes[row_index, 1].set_xticklabels([f'C{i+1}' for i in range(N_conditions)])
+            axes[row_index, 1].set_title(f'Manual Violin Plot ({title_suffix})')
+            axes[row_index, 1].set_ylabel('Density')
+
+    # 3. Ridgeline Plot (Manual Stacking of KDEs)
+    # We use the same KDEs calculated above, but stack them vertically
+    y_offset = 0
+    for i in range(N_conditions):
+        group_data = df[df['condition'] == i + 1]['reaction_time' if row_index == 0 else 'transformed_rt']
+        if len(group_data) > 0:
+            kde = gaussian_kde(group_data)
+            xs = np.linspace(group_data.min(), group_data.max(), 200)
+            dens = kde(xs)
+            dens = dens / dens.max() * 0.4
+            
+            # Plot the density curve shifted by y_offset
+            axes[row_index, 2].fill_between(xs, y_offset - dens, y_offset + dens, alpha=0.4)
+            y_offset += 0.8 # Increase offset for next curve
+            
+    axes[row_index, 2].set_title(f'Ridgeline Plot ({title_suffix})')
+    axes[row_index, 2].set_xlabel('Reaction Time')
+    axes[row_index, 2].set_ylabel('Condition')
+    
+    # General cleanup for the row
+    for ax in axes[row_index, :]:
+        ax.grid(axis='y', linestyle='--', alpha=0.6)
+
+
+# Row 1: Raw Data
+plot_distributions(df, 0, "Raw Data")
+
+# Row 2: Transformed Data
+plot_distributions(df, 1, "Transformed Data (log1p)")
+
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- The **Box Plot** is the best plot to reveal the right skew and the presence of extreme outliers in the raw data due to its explicit display of quartiles and whiskers.
+- The **Ridgeline Plot** is the most robust to the transformation because it visualizes the underlying probability density functions (KDEs) rather than relying on summary statistics (like the median/IQR in a box plot).
+- The transformation successfully compresses the spread of the raw data, making the distributions in the bottom row appear much more symmetrical and less influenced by the extreme outliers.
+
+30)Assumptions:
+- The `iris` dataset is available via `sns.load_dataset('iris')`.
+- The `joypy` library is installed and available for the ridgeline plot.
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import scipy.stats
+from skimage import color
+from matplotlib.colors import LinearSegmentedColormap, ListedColormap
+
+# --- Data Loading and Preparation ---
+iris = sns.load_dataset('iris')
+numeric_cols = ['sepal_length', 'sepal_width', 'petal_length', 'petal_width']
+corr_matrix = iris[numeric_cols].corr()
+
+# --- Figure Setup ---
+fig, axes = plt.subplots(2, 3, figsize=(20, 10))
+plt.suptitle("Iris Dataset Visualization Lab 04", fontsize=16)
+
+# ==============================================================================
+# ROW 1: Spread Plots
+# ==============================================================================
+
+# (1,1) Box plot of sepal_length by species
+sns.boxplot(data=iris, x='species', y='sepal_length', ax=axes[0, 0])
+axes[0, 0].set_title('1.1 Sepal Length by Species (Box Plot)')
+axes[0, 0].set_xlabel('Species')
+axes[0, 0].set_ylabel('Sepal Length')
+
+# (1,2) Manual violin of petal_length by species
+species_list = iris['species'].unique()
+petal_lengths = [iris[iris['species'] == s]['petal_length'] for s in species_list]
+x_positions = np.arange(len(species_list))
+
+for i, vals in enumerate(petal_lengths):
+    # Calculate KDE
+    kde = scipy.stats.gaussian_kde(vals)
+    xs = np.linspace(vals.min(), vals.max(), 200)
+    dens = kde(xs)
+    # Normalize density for visualization
+    dens = dens / dens.max() * 0.4
+    
+    # Plot the density shape
+    axes[0, 1].fill_between(xs, i - dens, i + dens, alpha=0.4, label=species_list[i])
+
+axes[0, 1].set_title('1.2 Petal Length by Species (Manual Violin)')
+axes[0, 1].set_xticks(x_positions)
+axes[0, 1].set_xticklabels(species_list)
+axes[0, 1].set_xlabel('Species')
+axes[0, 1].set_ylabel('Petal Length')
+axes[0, 1].legend(loc='upper right')
+
+
+# (1,3) Ridgeline of petal_width by species
+try:
+    import joypy
+    joypy.joyplot(iris, by='species', column='petal_width', kind='kde', overlap=0.5, ax=axes[0, 2])
+    axes[0, 2].set_title('1.3 Petal Width by Species (Ridgeline)')
+except ImportError:
+    axes[0, 2].text(0.5, 0.5, "joypy not installed. Skipping Ridgeline plot.", 
+                     ha='center', va='center', transform=axes[0, 2].transAxes)
+    axes[0, 2].set_title('1.3 Petal Width by Species (Ridgeline)')
+
+
+# ==============================================================================
+# ROW 2: Heatmaps and Color Palettes
+# ==============================================================================
+
+# (2,1) Correlation heatmap, divergent palette centered at 0
+fig_21, ax_21 = plt.subplots()
+sns.heatmap(corr_matrix, cmap='bwrd', center=0, annot=True, fmt=".2f", ax=ax_21)
+ax_21.set_title('2.1 Correlation Heatmap (Divergent Palette)')
+plt.close(fig_21) # Close temporary figure
+
+# (2,2) Same correlation matrix, 4-checkpoint quantile-anchored colormap
+M = corr_matrix.values
+# Quantile normalization
+ranks = M.flatten().argsort().argsort() / (M.size - 1)
+M_q = ranks.reshape(M.shape)
+
+# Create 4-checkpoint gradient (e.g., 0.1, 0.3, 0.7, 0.9)
+# We map the normalized values [0, 1] to colors.
+# Since M_q is already normalized [0, 1], we use it directly for the gradient stops.
+# We define 4 stops: 0.0, 0.33, 0.66, 1.0
+stops = [
+    (0.0, 'blue'), 
+    (1/3, 'white'), 
+    (2/3, 'white'), 
+    (1.0, 'red')
+]
+cmap_q = LinearSegmentedColormap.from_list('quantile_bwrd', stops)
+
+fig_22, ax_22 = plt.subplots()
+sns.heatmap(M_q, cmap=cmap_q, annot=True, fmt=".2f", ax=ax_22)
+ax_22.set_title('2.2 Quantile-Anchored Correlation Heatmap (4-Checkpoint)')
+plt.close(fig_22)
+
+# (2,3) Palette of three swatches (Triadic harmony starting at hue 0)
+h_start = 0.0
+h_triadic = [h_start, h_start + 1/3, h_start + 2/3]
+cols = [color.hsv2rgb([hh, 0.65, 0.9]) for hh in h_triadic]
+
+ax_23 = axes[1, 2]
+for i, c in enumerate(cols):
+    ax_23.add_patch(plt.Rectangle((i, 0), 1, 1, color=c))
+
+ax_23.set_xlim(0, 3)
+ax_23.set_ylim(0, 1)
+ax_23.axis('off')
+ax_23.set_title('2.3 Triadic Color Palette (Hues: 0, 1/3, 2/3)')
+
+
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- For the manual violin plot, `scipy.stats.gaussian_kde` is used to estimate the probability density function (PDF) for each group, which is then visualized using `plt.fill_between`.
+- The quantile heatmap uses `argsort().argsort()` to transform the correlation matrix values into ranks (0 to 1), allowing a custom `LinearSegmentedColormap` to be built based on fixed quantile stops.
+- The triadic palette is generated by adding $1/3$ and $2/3$ to the starting hue (0) and converting the resulting HSV values to RGB using `skimage.color.hsv2rgb`.
+
+
+
+(17)
+My exam shows a 5x5 numeric table with values ranging roughly from
+-3 to 8 - I cannot copy it. Synthesize a plausible 5x5 matrix, then
+build a heatmap using a 4-checkpoint quantile-anchored colormap whose
+stops are at q = 0.05, 0.4, 0.6, 0.95 with colors navy, lightblue,
+lightcoral, darkred.
+
+Assumptions:
+- The table is a 5x5 matrix of numeric data.
+- The values range approximately from -3 to 8.
+- The heatmap should display the matrix values, using a custom colormap defined by four quantile checkpoints.
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from matplotlib.colors import LinearSegmentedColormap
+
+# 1. Synthesize 5x5 data matrix (M)
+# Using random data centered around 2.5 with a standard deviation that allows for the desired range.
+np.random.seed(42)
+M = np.random.uniform(-3, 8, size=(5, 5))
+
+# 2. Calculate quantiles
+vmin = M.min()
+vmax = M.max()
+q_005 = np.quantile(M, 0.05)
+q_04 = np.quantile(M, 0.40)
+q_06 = np.quantile(M, 0.60)
+q_095 = np.quantile(M, 0.95)
+
+# 3. Define color stops for the custom colormap
+# Stop format: ((quantile_value - vmin) / (vmax - vmin), color)
+stops = [
+    ((q_005 - vmin) / (vmax - vmin), 'navy'),
+    ((q_04 - vmin) / (vmax - vmin), 'lightblue'),
+    ((q_06 - vmin) / (vmax - vmin), 'lightcoral'),
+    ((q_095 - vmin) / (vmax - vmin), 'darkred')
+]
+
+# 4. Create the custom LinearSegmentedColormap
+custom_cmap = LinearSegmentedColormap.from_list("QuantileMap", stops)
+
+# 5. Plot the heatmap
+plt.figure(figsize=(8, 7))
+sns.heatmap(M, cmap=custom_cmap, vmin=vmin, vmax=vmax, annot=True, fmt=".1f")
+plt.title("Heatmap of 5x5 Numeric Matrix using Quantile-Anchored Colormap")
+plt.xlabel("Column Index")
+plt.ylabel("Row Index")
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- The custom colormap is built by normalizing the specified quantile values (0.05, 0.4, 0.6, 0.95) relative to the matrix's actual min/max.
+- `vmin` and `vmax` are passed to `sns.heatmap` to ensure the custom colormap spans the entire data range correctly.
+- If your real data has a different range, ensure you calculate the quantiles based on that data's min/max.
+
+
+(8)
+Build a manual violin plot (do NOT use sns.violinplot) for
+`iris` petal_length across the three species. Use
+scipy.stats.gaussian_kde and plt.fill_betweenx so each species
+shows mirrored density.
+
+Assumptions:
+- The `iris` dataset contains columns 'petal_length' (numeric) and 'species' (categorical).
+- There are three distinct species in the dataset.
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import gaussian_kde
+
+# Load the iris dataset
+iris = sns.load_dataset('iris')
+
+# Identify unique species and prepare data for iteration
+species_list = iris['species'].unique()
+group_data = {species: iris[iris['species'] == species]['petal_length'].values for species in species_list}
+
+# Setup plot figure
+fig, ax = plt.subplots(figsize=(10, 6))
+x_range = np.linspace(iris['petal_length'].min() - 0.5, iris['petal_length'].max() + 0.5, 500)
+group_positions = range(len(species_list))
+
+# Manual Violin Plot Generation
+for i, species in enumerate(species_list):
+    vals = group_data[species]
+    
+    # 1. Calculate KDE
+    kde = gaussian_kde(vals)
+    
+    # 2. Evaluate KDE over the defined range
+    dens = kde(x_range)
+    
+    # 3. Normalize and scale the density (0.4 controls the max width)
+    # We normalize by max density and scale it down to control the visual size
+    dens_scaled = dens / dens.max() * 0.4
+    
+    # 4. Plot the mirrored density using fill_betweenx
+    # The density is mirrored around the position i
+    ax.fill_betweenx(group_positions[i], 
+                     i - dens_scaled, 
+                     i + dens_scaled, 
+                     alpha=0.5, 
+                     label=species)
+
+# Final plot styling
+ax.set_xticks(group_positions)
+ax.set_xticklabels(species_list)
+ax.set_xlabel("Species")
+ax.set_ylabel("Petal Length Density")
+ax.set_title("Manual Violin Plot of Petal Length by Species")
+ax.legend()
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- The manual violin plot is constructed by calculating the Kernel Density Estimate (KDE) for each species' petal lengths.
+- `plt.fill_betweenx` is used to draw the density curve mirrored around the designated position for each species group.
+- If the data distribution is highly skewed, you might need to adjust the scaling factor (0.4) in `dens_scaled` to better visualize the shape.
+
+
+
+
+(30)
+A 2x3 figure for the `iris` dataset:
+  (1,1) box plot of sepal_length by species
+  (1,2) manual violin of petal_length by species
+  (1,3) joypy ridgeline of petal_width by species
+  (2,1) correlation heatmap of numeric columns, divergent palette
+        centered at 0
+  (2,2) the same correlation matrix re-rendered with a 4-checkpoint
+        quantile-anchored colormap
+  (2,3) palette of three swatches representing the three species,
+        derived from a triadic harmony starting at hue 0
+Use plt.suptitle and tight_layout.
+
+
+Assumptions:
+- The `iris` dataset contains columns: `sepal_length`, `sepal_width`, `petal_length`, `petal_width`, and `species`.
+- `joypy` is available for the ridgeline plot.
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy.stats import gaussian_kde
+from skimage import color, img_as_float
+import joypy # Required for ridgeline plot
+from matplotlib.colors import ListedColormap
+
+# Load the iris dataset
+iris = sns.load_dataset('iris')
+
+# Setup figure and axes (2 rows, 3 columns)
+fig, axes = plt.subplots(2, 3, figsize=(20, 10))
+fig.suptitle("Data Visualization Lab 04: Spread Plots, Ridgeline, and Color Theory", fontsize=16)
+
+# --- (1,1) Box plot of sepal_length by species ---
+sns.boxplot(data=iris, x='species', y='sepal_length', ax=axes[0, 0])
+axes[0, 0].set_title('1.1 Sepal Length by Species (Box Plot)')
+axes[0, 0].set_xlabel('Species')
+axes[0, 0].set_ylabel('Sepal Length')
+
+# --- (1,2) Manual violin of petal_length by species ---
+species_list = iris['species'].unique()
+for i, species in enumerate(species_list):
+    vals = iris[iris['species'] == species]['petal_length']
+    
+    # Calculate KDE
+    kde = gaussian_kde(vals)
+    xs = np.linspace(vals.min(), vals.max(), 200)
+    dens = kde(xs)
+    
+    # Normalize and scale for visualization
+    dens = dens / dens.max() * 0.4
+    
+    # Plot the violin shape
+    plt.fill_betweenx(xs, i - dens, i + dens, alpha=0.4, ax=axes[0, 1])
+
+axes[0, 1].set_title('1.2 Petal Length by Species (Manual Violin)')
+axes[0, 1].set_xticks(range(len(species_list)))
+axes[0, 1].set_xticklabels(species_list)
+axes[0, 1].set_xlabel('Species')
+axes[0, 1].set_ylabel('Petal Length')
+
+
+# --- (1,3) Ridgeline of petal_width by species ---
+joypy.joyplot(iris, by='species', column='petal_width', ax=axes[0, 2])
+axes[0, 2].set_title('1.3 Petal Width by Species (Ridgeline)')
+axes[0, 2].set_xlabel('Species')
+axes[0, 2].set_ylabel('Petal Width')
+
+
+# --- (2,1) Correlation heatmap (Divergent Palette) ---
+numeric_cols = iris.select_dtypes(include=np.number).columns
+corr_matrix = iris[numeric_cols].corr()
+
+sns.heatmap(corr_matrix, annot=True, cmap='bwrd', center=0, linewidths=.5, linecolor='black', ax=axes[1, 0])
+axes[1, 0].set_title('2.1 Correlation Heatmap (Divergent Palette)')
+axes[1, 0].set_xlabel('Features')
+axes[1, 0].set_ylabel('Features')
+
+
+# --- (2,2) Correlation heatmap (Quantile-anchored Colormap) ---
+# Calculate ranks for quantile mapping
+M = corr_matrix.values
+ranks = M.flatten().argsort().argsort() / (M.size - 1)
+M_q = ranks.reshape(M.shape)
+
+# Use the ranked matrix for the heatmap
+sns.heatmap(M_q, annot=True, cmap='viridis', linewidths=.5, linecolor='black', ax=axes[1, 1])
+axes[1, 1].set_title('2.2 Correlation Heatmap (Quantile-Anchored)')
+axes[1, 1].set_xlabel('Features (Quantile Rank)')
+axes[1, 1].set_ylabel('Features (Quantile Rank)')
+
+
+# --- (2,3) Color Palette (Triadic Harmony) ---
+# Triadic harmony starting at hue 0: [0, 1/3, 2/3]
+hues = [0.0, 1/3, 2/3]
+# Use a fixed saturation and value for consistency
+S = 0.65
+V = 0.9
+cols = [color.hsv2rgb([h, S, V]) for h in hues]
+
+ax = axes[1, 2]
+ax.add_patch(plt.Rectangle((0, 0), 1, 1, color=cols[0]))
+ax.add_patch(plt.Rectangle((1, 0), 1, 1, color=cols[1]))
+ax.add_patch(plt.Rectangle((2, 0), 1, 1, color=cols[2]))
+
+ax.set_xlim(0, 3)
+ax.set_ylim(0, 1)
+ax.axis('off')
+ax.set_title('2.3 Triadic Color Palette (h=0, 1/3, 2/3)')
+
+# Final layout adjustments
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- For the manual violin plot, the KDE is calculated for each species group and scaled to fit the subplot area.
+- The quantile heatmap uses the rank of the correlation values across the entire matrix to create a perceptually uniform color scale.
+- The triadic palette uses `skimage.color.hsv2rgb` with fractional hues (0, 1/3, 2/3) to generate the colors.

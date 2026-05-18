@@ -1,0 +1,102 @@
+ (1)The Custom Statistics SubplotLoad the Seaborn tips dataset. Write a custom function to calculate the Harmonic Mean $HM = \frac{n}{\sum_{i=1}^n \frac{1}{x_i}}$.Group the dataset by day and calculate both the arithmetic mean and your custom harmonic mean for the total_bill.Create a 1x2 Matplotlib subplot.On the left, plot a grouped bar chart comparing the arithmetic mean vs. harmonic mean of total_bill for each day.On the right, plot a scatter plot of total_bill vs tip, but apply Min-Max Normalization to the tip values before plotting. Use a logarithmic scale for the x-axis (total_bill).
+
+
+(2)Generate an array of 200 values for $\theta$ from $0$ to $2\pi$. Create a polar curve defined by $r = 2 \cos(4\theta)$ (a flower shape).Convert these polar coordinates $(r, \theta)$ into Cartesian coordinates $(x, y)$.Using only 3x3 homogeneous matrices and numpy matrix multiplication (do not use skimage or loops), apply the following sequence of transformations to the Cartesian points:First, scale by $s_x = 1.5, s_y = 0.5$.Second, shear horizontally by $sh_x = 0.3$.Third, rotate by $45^\circ$.Finally, translate by $t_x = 2, t_y = -1$.Plot the original Cartesian shape in blue and the final transformed shape in red on the same grid. Ensure the aspect ratio is equal.
+
+
+(3)Generate a 5x5 NumPy matrix of random integers between 1 and 100.Write a custom function to calculate the Contra-Harmonic Mean (CHM) using $p=1$: $CHM = \frac{\sum x^2}{\sum x}$.Calculate the CHM of the entire 5x5 matrix.Without using any for loops, replace all values in the matrix that are strictly less than the CHM with the value 0.Calculate the dot product of this modified matrix with its own transpose.Visualize the final resulting matrix using a Seaborn heatmap with values annotated in the cells.
+
+
+
+solution:
+Assumptions:
+- The 'tips' dataset contains 'total_bill', 'tip', and 'day' columns.
+
+```python
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import MinMaxScaler
+
+# Load the dataset
+tips = sns.load_dataset("tips")
+
+# 1. Custom Harmonic Mean function
+def harmonic_mean(x):
+    """Calculates the Harmonic Mean: n / sum(1/x_i)"""
+    # Handle potential zero values to avoid division by zero
+    x = x[x != 0]
+    if x.empty:
+        return np.nan
+    return len(x) / x.apply(lambda val: 1/val).sum()
+
+# 2. Grouping and Calculation
+grouped_stats = tips.groupby('day')['total_bill'].agg(
+    arithmetic_mean='mean',
+    harmonic_mean=harmonic_mean
+).reset_index()
+
+# 3. Min-Max Normalization for 'tip'
+scaler = MinMaxScaler()
+tips['tip_normalized'] = scaler.fit_transform(tips[['tip']])
+
+# 4. Setup Subplots
+fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+plt.subplots_adjust(wspace=0.3)
+
+# --- Left Subplot: Grouped Bar Chart ---
+# Plotting AM vs HM for total_bill by day
+sns.barplot(
+    x='day', 
+    y='arithmetic_mean', 
+    data=grouped_stats, 
+    ax=axes[0], 
+    color='skyblue', 
+    label='Arithmetic Mean'
+)
+# Plotting HM on the same axes (using a different color/marker for distinction)
+# Since we are using barplot, we plot the HM data manually on top of the AM bars
+ax1 = axes[0]
+bar_width = 0.35
+index = np.arange(len(grouped_stats['day'].unique()))
+
+# Plot AM bars
+ax1.bar(index - bar_width/2, grouped_stats['arithmetic_mean'], bar_width, label='Arithmetic Mean')
+# Plot HM bars
+ax1.bar(index + bar_width/2, grouped_stats['harmonic_mean'], bar_width, label='Harmonic Mean')
+
+ax1.set_title('Mean Comparison of Total Bill by Day')
+ax1.set_ylabel('Total Bill Value')
+ax1.set_xlabel('Day')
+ax1.set_xticks(index)
+ax1.set_xticklabels(grouped_stats['day'])
+ax1.legend()
+ax1.grid(axis='y', linestyle='--', alpha=0.7)
+
+
+# --- Right Subplot: Scatter Plot with Normalization and Log Scale ---
+# Scatter plot of total_bill vs normalized tip
+sns.scatterplot(
+    x=tips['total_bill'], 
+    y=tips['tip_normalized'], 
+    data=tips, 
+    ax=axes[1], 
+    s=100
+)
+
+# Apply logarithmic scale to the x-axis (total_bill)
+axes[1].set_xscale('log')
+
+axes[1].set_title('Total Bill vs Normalized Tip (Log Scale)')
+axes[1].set_xlabel('Total Bill (Log Scale)')
+axes[1].set_ylabel('Normalized Tip')
+axes[1].grid(True, which="both", ls="--", alpha=0.5)
+
+plt.suptitle('Custom Statistics Visualization', fontsize=16)
+plt.show()
+```
+
+Notes:
+- For the bar chart, if you needed to compare more metrics (e.g., standard deviation), you would use `sns.barplot` with `estimator` or manually plot multiple sets of bars.
+- If the data distribution for the right plot is highly skewed, consider using a log scale for the y-axis as well, or using a KDE plot to visualize the distribution of the normalized tip.

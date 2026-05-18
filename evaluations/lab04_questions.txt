@@ -1,0 +1,249 @@
+=================================================================
+LAB 04 EVALUATION QUESTION BANK
+Topic: DV Lab 04 - Spread & Color Theory
+Usage: paste ONE question per fresh chat in Lab Rat.
+       Collect generations into evaluations/lab04_generations.txt
+       for re-evaluation (mirror the same (N) numbering).
+=================================================================
+
+
+----------------------------------------------------------------
+TIER 1: EASY (single concept, direct application)
+----------------------------------------------------------------
+
+(1)
+Make a box plot of `iris` sepal_length grouped by species. Include
+a title, x-axis label, and y-axis label.
+
+
+(2)
+Load the skimage astronaut image and show its R, G, and B channels
+in a 1x3 subplot. Each channel grayscale, each subplot titled with
+the channel letter.
+
+
+(3)
+Generate a complementary color palette starting from base hue
+h = 0.6 and display the two colors as side-by-side rectangles
+using plt.Rectangle. Title the figure "Complementary".
+
+
+(4)
+Convert the skimage astronaut image to HSV and display the hue
+channel alone using cmap='gray'. Title the figure "Hue channel".
+
+
+(5)
+Make a violin plot of `iris` petal_width by species using seaborn.
+Title and label both axes.
+
+
+(6)
+Draw a heatmap of the `flights` dataset pivoted as month x year
+using the 'viridis' colormap. Include a colorbar.
+
+
+----------------------------------------------------------------
+TIER 2: MEDIUM (two concepts, small subplot)
+----------------------------------------------------------------
+
+(7)
+For `iris` sepal_length by species, make a 1x2 subplot: left a box
+plot, right a violin plot (seaborn). Use the same y-axis range on
+both panels.
+
+
+(8)
+Build a manual violin plot (do NOT use sns.violinplot) for
+`iris` petal_length across the three species. Use
+scipy.stats.gaussian_kde and plt.fill_betweenx so each species
+shows mirrored density.
+
+
+(9)
+Make a ridgeline plot of `iris` sepal_width by species using
+joypy.joyplot. Set overlap = 0.7. Title the figure.
+
+
+(10)
+Show the skimage astronaut image's six channels - R, G, B, H, S, V -
+in a 2x3 grid. All grayscale. Each subplot titled with the channel
+letter.
+
+
+(11)
+Pick base hue h = 0.08. In a 3x1 subplot, display its complementary,
+triadic, and analogous palettes as rows of color swatches. Title
+each row with the harmony name.
+
+
+(12)
+Build a correlation heatmap of `iris` numeric columns. Use a custom
+divergent blue-white-red colormap centered at 0. Annotate the cells
+with the correlation values.
+
+
+(13)
+Create a 30x30 random matrix using np.random.default_rng(0) and
+normal(0, 1). Inject 5 outliers around value 12 at random positions.
+In a 1x2 subplot, show the raw heatmap on the left and a clipped
+2nd-98th percentile heatmap on the right.
+
+
+(14)
+Take the same noisy 30x30 matrix (regenerate it the same way) and
+build a quantile-rank-normalized heatmap. Title it
+"Quantile normalized [0,1]". Briefly note in a Notes section what
+structure becomes visible compared to the raw view.
+
+
+----------------------------------------------------------------
+TIER 3: HARD (CT-style, table-described, multi-deliverable)
+----------------------------------------------------------------
+
+(15)
+I have a dataset of 4 different fish species with about 80 weight
+measurements each, but I cannot paste the data. Synthesize plausible
+distributions where exactly one species is clearly bimodal. Build a
+1x3 subplot: box plot, manual violin (gaussian_kde + fill_betweenx),
+and a joypy ridgeline. In a short Notes section, say which plot best
+reveals the bimodality and why.
+
+
+(16)
+Take the skimage astronaut image, compute its per-pixel hue, then
+find the most common hue rounded to the nearest 0.05 bin. Use that
+hue as the base for a triadic palette. Display the palette next to
+the original image in a 1x2 subplot.
+
+
+(17)
+My exam shows a 5x5 numeric table with values ranging roughly from
+-3 to 8 - I cannot copy it. Synthesize a plausible 5x5 matrix, then
+build a heatmap using a 4-checkpoint quantile-anchored colormap whose
+stops are at q = 0.05, 0.4, 0.6, 0.95 with colors navy, lightblue,
+lightcoral, darkred.
+
+
+(18)
+Build a correlation heatmap and a covariance heatmap for the `tips`
+numeric columns, side by side in a 1x2 subplot. Both use a divergent
+palette centered at 0. Both have annot=True. Title each subplot
+clearly.
+
+
+(19)
+Create a 50x50 matrix where about 95% of values are small noise
+around 0 and about 5% are extreme outliers (>50). Show three
+side-by-side heatmaps: raw, clipped at 2/98 percentile, and a hybrid
+sign(x) * log1p(|x|) transformed view. Use a consistent divergent
+palette across all three subplots.
+
+
+(20)
+Build a ridgeline plot (joypy) of `tips` total_bill split by day
+with overlap = 0.6. Directly below in a stacked layout (use
+plt.subplots(2, 1)), show a seaborn box plot of the same data for
+comparison. Share the x-axis range between the two panels.
+
+
+(21)
+For the skimage astronaut image: (a) convert to HSV; (b) build a
+boolean mask that selects pixels whose hue is between 0.0 and 0.1;
+(c) display the original image, the mask, and the original masked
+by the mask (everything else black) as a 1x3 subplot.
+
+
+(22)
+Generate a custom 5-color discrete palette where the hues are spaced
+equally around the circle at {0.0, 0.2, 0.4, 0.6, 0.8} with
+saturation 0.65 and value 0.9. Use this palette as a ListedColormap
+to recolor a sns.boxplot of `iris` sepal_width by species (3
+categories - pick the first 3 colors).
+
+
+----------------------------------------------------------------
+TIER 4: REALLY REALLY HARD (adversarial decoys + composites)
+----------------------------------------------------------------
+
+(23)
+A student wrote: "for complementary harmony use 180 degrees, for
+triadic use 120 and 240 degrees, for analogous use plus-or-minus 30
+degrees." Show why fractional hue offsets in [0, 1] are equivalent
+and easier, then implement all three palettes from base hue 0.3 in a
+3x1 subplot of swatches.
+
+
+(24)
+Build a heatmap of `iris` numeric columns after min-max normalizing
+each column to [0, 1] WITHOUT importing sklearn. Use a sequential
+palette and annotate the cells.
+
+
+(25)
+I have data on 4 retail stores (Alpha, Beta, Gamma, Delta) with one
+summary row each containing: monthly_sales (in thousands),
+customer_count, satisfaction_score (1-10). Create a 1x2 subplot -
+left a grouped bar of sales vs customers, right a horizontal lollipop
+of satisfaction. Do NOT fabricate per-store samples; one row per
+store only. Recolor the bars using a triadic palette derived from
+base hue 0.55.
+
+
+(26)
+A 2x2 figure for the `iris` dataset:
+  (1,1) box plot of sepal_length by species
+  (1,2) correlation heatmap of numeric columns, divergent palette
+        centered at 0
+  (2,1) joypy ridgeline of petal_length by species
+  (2,2) three color swatches representing the three species using
+        hue offsets of {0.0, 0.33, 0.66}
+Use plt.suptitle("Iris - Lab 04 mashup") and tight_layout.
+
+
+(27)
+Load the skimage astronaut image. Compute the mean hue across all
+pixels. Use that mean hue to generate complementary, triadic, and
+analogous palettes. Apply each palette as a ListedColormap to a
+heatmap of the H channel itself, producing a 1x3 subplot. Each
+subplot titled with the palette name.
+
+
+(28)
+Create a 40x40 matrix with mostly small values and about 10 large
+outliers. Build two quantile-anchored colormaps from harmony palettes:
+the first uses a cool-to-warm gradient (hue ~0.6 going to ~0.05),
+the second is its complementary swap (warm-to-cool). Apply both to
+the same matrix in a 1x2 subplot. Title each subplot with the
+gradient direction.
+
+
+(29)
+I have 500 reaction times where roughly 10% of values are 3-5x
+larger than the median (right-skewed outliers). Synthesize that
+distribution, then in a 2x3 subplot show:
+  Row 1: box, manual violin, ridgeline of the raw data grouped by a
+         synthetic `condition` column with 3 levels.
+  Row 2: the same three plot types after applying a
+         sign(x) * log1p(|x|) transformation.
+In a short Notes section, identify which plot best reveals the right
+skew and which is most robust to the transformation.
+
+
+(30)
+A 2x3 figure for the `iris` dataset:
+  (1,1) box plot of sepal_length by species
+  (1,2) manual violin of petal_length by species
+  (1,3) joypy ridgeline of petal_width by species
+  (2,1) correlation heatmap of numeric columns, divergent palette
+        centered at 0
+  (2,2) the same correlation matrix re-rendered with a 4-checkpoint
+        quantile-anchored colormap
+  (2,3) palette of three swatches representing the three species,
+        derived from a triadic harmony starting at hue 0
+Use plt.suptitle and tight_layout.
+
+
+=================================================================
+END OF QUESTION BANK
+=================================================================

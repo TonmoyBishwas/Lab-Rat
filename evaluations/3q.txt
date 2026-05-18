@@ -1,0 +1,137 @@
+(A) I have a CSV with columns body_type and drive_type (both categorical). Make a stacked bar chart of counts grouped by both.
+
+
+Assumptions:
+- The dataset contains two categorical columns: `body_type` and `drive_type`.
+- The data is sufficiently large to show meaningful counts.
+
+```python
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Synthesize plausible data
+np.random.seed(42)
+N = 300
+body_types = ['Sedan', 'SUV', 'Truck', 'Hatchback']
+drive_types = ['FWD', 'AWD', 'RWD']
+
+data = {
+    'body_type': np.random.choice(body_types, N, p=[0.3, 0.3, 0.2, 0.2]),
+    'drive_type': np.random.choice(drive_types, N, p=[0.4, 0.4, 0.2])
+}
+df = pd.DataFrame(data)
+
+# Calculate the counts using crosstab
+counts = pd.crosstab(df['body_type'], df['drive_type'])
+
+# Plotting the stacked bar chart
+fig, ax = plt.subplots(figsize=(10, 6))
+
+# Plotting the counts matrix
+counts.plot(kind='bar', stacked=True, ax=ax)
+
+# Setting titles and labels
+ax.set_title('Count of Body Types Grouped by Drive Types')
+ax.set_xlabel('Body Type')
+ax.set_ylabel('Count')
+ax.legend(title='Drive Type')
+plt.xticks(rotation=0)
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- `pd.crosstab` efficiently calculates the frequency matrix needed for the stacked bar chart.
+- Using `counts.plot(kind='bar', stacked=True)` is the most direct way to generate the required visualization from the count matrix.
+- If the data were very sparse, using `seaborn.countplot` with `hue` might be an alternative, but `crosstab` is ideal for pre-calculating the stacked values.
+
+B)I have a dataframe with columns job_role (categorical, ~5 levels) and salary_lpa (numeric). Make a jittered dot plot — one column of dots per job_role with horizontal jitter so
+ they don't overlap.
+
+Assumptions:
+- The dataframe contains two columns: `job_role` (categorical, 5 levels) and `salary_lpa` (numeric).
+- Approximately 100 data points are sufficient for visualization.
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Generate synthetic data
+np.random.seed(42)
+job_roles = ['Engineer', 'Manager', 'Analyst', 'Designer', 'Associate']
+n_rows = 100
+df = pd.DataFrame({
+    'job_role': np.random.choice(job_roles, n_rows),
+    'salary_lpa': np.random.normal(loc=50, scale=15, size=n_rows) + 
+                  np.where(np.random.choice(job_roles, n_rows) == 'Manager', 20, 0)
+})
+
+# Ensure salaries are positive
+df['salary_lpa'] = df['salary_lpa'].apply(lambda x: max(10, x))
+
+# Create the jittered dot plot (Swarmplot)
+plt.figure(figsize=(10, 6))
+sns.swarmplot(data=df, x='job_role', y='salary_lpa', size=6, alpha=0.7)
+
+plt.title('Salary Distribution by Job Role (Jittered Dot Plot)')
+plt.xlabel('Job Role')
+plt.ylabel('Salary (LPA)')
+plt.grid(axis='y', linestyle='--', alpha=0.5)
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- Swarmplot is the ideal choice here as it automatically handles the horizontal jittering to prevent dots from overlapping while maintaining the count of observations per category.
+- If the data were extremely dense, you might consider using `sns.stripplot` with a small `jitter` parameter, but `swarmplot` is usually superior for clear visualization.
+- If you needed to show the mean salary alongside the dots, you could overlay a `sns.pointplot` on the same axes.
+
+
+c) Make a horizontal lollipop plot using plt.hlines for the sticks and plt.plot for the dots. Data: 5 categories with one value each.
+Assumptions:
+- The 5 categories are represented by strings (e.g., 'A', 'B', 'C', 'D', 'E').
+- The 5 values are numerical, representing the length of the lollipop stick.
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Synthetic data for 5 categories and their corresponding values
+categories = ['Category A', 'Category B', 'Category C', 'Category D', 'Category E']
+values = np.array([15, 22, 10, 30, 18])
+
+# Create the figure and axes
+fig, ax = plt.subplots(figsize=(10, 6))
+
+# 1. Draw the sticks (horizontal lines)
+# The y-coordinates are the index of the category (0 to 4).
+# The x-coordinates range from 0 up to the value.
+y_positions = np.arange(len(categories))
+ax.hlines(y_positions, 0, values, colors='gray', linewidth=3)
+
+# 2. Draw the dots (markers)
+# We plot the value at the corresponding category position.
+ax.plot(values, y_positions, 'o', color='darkred', markersize=8)
+
+# Set labels and title
+ax.set_yticks(y_positions)
+ax.set_yticklabels(categories)
+ax.set_xlabel("Value")
+ax.set_ylabel("Category")
+ax.set_title("Horizontal Lollipop Plot")
+
+# Ensure the plot starts at 0 on the x-axis
+ax.set_xlim(0, values.max() * 1.1)
+ax.grid(axis='x', linestyle='--', alpha=0.6)
+
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- The horizontal lollipop plot is achieved by using `hlines` to draw the sticks from the origin (0) up to the value, and `plot` to mark the endpoint.
+- The Y-axis positions are set using `np.arange` to correspond to the index of each category.
+- Ensure the X-axis limit (`ax.set_xlim`) is slightly larger than the maximum value to accommodate the final dot.

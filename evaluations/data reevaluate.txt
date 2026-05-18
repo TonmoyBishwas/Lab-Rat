@@ -1,0 +1,209 @@
+(1)Assumptions:
+- The `tips` dataset contains columns: 'total_bill', 'tip', and 'day'.
+- The data is loaded successfully using `seaborn.load_dataset('tips')`.
+
+```python
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Load the dataset
+tips = sns.load_dataset('tips')
+
+# Custom Harmonic Mean function
+def harmonic_mean(x):
+    """Calculates the Harmonic Mean: n / sum(1/x_i)"""
+    # Ensure all values are positive before calculating HM
+    x = x[x > 0]
+    if x.empty:
+        return np.nan
+    return len(x) / (1 / x).sum()
+
+# Group by day and calculate AM and HM for total_bill
+grouped_stats = tips.groupby('day')['total_bill'].agg(
+    arithmetic_mean='mean',
+    harmonic_mean=harmonic_mean
+).reset_index()
+
+# --- Right Subplot: Min-Max Normalization ---
+# Min-Max Normalization for 'tip': (x - x_min) / (x_max - x_min)
+tips['tip_normalized'] = (tips['tip'] - tips['tip'].min()) / (tips['tip'].max() - tips['tip'].min())
+
+# --- Plotting ---
+fig, axes = plt.subplots(1, 2, figsize=(18, 7))
+plt.suptitle("Custom Statistics and Normalization on Tips Dataset", fontsize=16)
+
+# Left Subplot: Grouped Bar Chart (AM vs HM)
+days = grouped_stats['day']
+am_values = grouped_stats['arithmetic_mean']
+hm_values = grouped_stats['harmonic_mean']
+
+x = np.arange(len(days))  # the label locations
+width = 0.35  # the width of the bars
+
+rects1 = axes[0].bar(x - width/2, am_values, width, label='Arithmetic Mean (AM)')
+rects2 = axes[0].bar(x + width/2, hm_values, width, label='Harmonic Mean (HM)')
+
+axes[0].set_ylabel('Total Bill Value')
+axes[0].set_xlabel('Day')
+axes[0].set_title('Comparison of AM vs HM of Total Bill by Day')
+axes[0].set_xticks(x)
+axes[0].set_xticklabels(days)
+axes[0].legend()
+
+# Right Subplot: Scatter Plot (Total Bill vs Normalized Tip)
+axes[1].scatter(tips['total_bill'], tips['tip_normalized'], alpha=0.6)
+axes[1].set_xscale('log') # Logarithmic scale for total_bill
+axes[1].set_xlabel('Total Bill (Log Scale)')
+axes[1].set_ylabel('Normalized Tip Value (Min-Max)')
+axes[1].set_title('Total Bill vs Normalized Tip')
+
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- The bar chart uses a grouped approach where the x-axis positions are offset to place AM and HM bars side-by-side for each day.
+- For the scatter plot, Min-Max normalization was applied directly to the 'tip' column before plotting against the log-scaled 'total_bill'.
+- If you wanted to compare the means visually, you could plot the AM and HM values as horizontal lines on the bar chart axes.
+
+Assumptions:
+- The polar curve is defined by $r = 2 \cos(4\theta)$.
+- The transformation sequence is applied in order: Scale $\to$ Shear $\to$ Rotate $\to$ Translate.
+
+```python
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 1. Generate angles and calculate polar coordinates
+N = 200
+theta = np.linspace(0, 2 * np.pi, N)
+r = 2 * np.cos(4 * theta)
+
+# 2. Convert polar (r, theta) to Cartesian (x, y)
+x_orig = r * np.cos(theta)
+y_orig = r * np.sin(theta)
+
+# 3. Prepare points for homogeneous transformation (N x 3 matrix)
+# P = [[x1, y1, 1], [x2, y2, 1], ...]
+P_orig = np.vstack((x_orig, y_orig, np.ones(N))).T
+
+# 4. Define transformation matrices (3x3)
+
+# Scale S(1.5, 0.5)
+sx, sy = 1.5, 0.5
+S = np.array([[sx, 0, 0],
+               [0, sy, 0],
+               [0, 0, 1]])
+
+# Horizontal Shear H(0.3)
+shx = 0.3
+H = np.array([[1, shx, 0],
+               [0, 1, 0],
+               [0, 0, 1]])
+
+# Rotation R(45 degrees)
+theta_rad = np.radians(45)
+cos_t, sin_t = np.cos(theta_rad), np.sin(theta_rad)
+R = np.array([[cos_t, -sin_t, 0],
+               [sin_t, cos_t, 0],
+               [0, 0, 1]])
+
+# Translation T(2, -1)
+tx, ty = 2, -1
+T = np.array([[1, 0, tx],
+               [0, 1, ty],
+               [0, 0, 1]])
+
+# 5. Composition: M = T @ R @ H @ S
+# Transformations are applied right-to-left (S first, T last)
+M = T @ R @ H @ S
+
+# 6. Apply transformation to all points (vectorized)
+# Transformed points = (M @ P_orig.T).T
+P_transformed = (M @ P_orig.T).T
+
+# Extract transformed Cartesian coordinates
+x_trans = P_transformed[:, 0]
+y_trans = P_transformed[:, 1]
+
+# 7. Plotting
+plt.figure(figsize=(10, 10))
+
+# Plot original shape (Blue)
+plt.plot(x_orig, y_orig, color='blue', label='Original Shape (r = 2 cos(4\u03b8))')
+
+# Plot transformed shape (Red)
+plt.plot(x_trans, y_trans, color='red', label='Transformed Shape')
+
+plt.title('Polar Curve Transformation')
+plt.xlabel('X Coordinate')
+plt.ylabel('Y Coordinate')
+plt.axis('equal') # Ensure equal aspect ratio
+plt.legend()
+plt.grid(True, linestyle='--', alpha=0.6)
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- The composite matrix $M$ is calculated by multiplying the matrices in the order of application (right-to-left).
+- Using `plt.axis('equal')` is crucial to ensure the geometric distortion due to the transformation is accurately represented on the plot.
+- If the shape was defined by a function $r(\theta)$, you would need to ensure the angle $\theta$ covers the full period required for the shape to close.
+
+
+(3)Assumptions:
+- The input data is a 5x5 NumPy matrix of random integers between 1 and 100.
+- The final visualization should display the resulting 5x5 matrix from the dot product.
+
+```python
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# 1. Generate a 5x5 NumPy matrix of random integers between 1 and 100
+np.random.seed(42) # for reproducibility
+M = np.random.randint(1, 101, size=(5, 5))
+
+# 2. Custom function to calculate the Contra-Harmonic Mean (CHM) for p=1
+def calculate_chm_p1(x):
+    """Calculates CHM (p=1): sum(x^2) / sum(x)"""
+    if x.sum() == 0:
+        return 0
+    return (x**2).sum() / x.sum()
+
+# 3. Calculate the CHM of the entire 5x5 matrix (flattened)
+M_flat = M.flatten()
+chm_value = calculate_chm_p1(M_flat)
+
+print(f"Original Matrix M:\n{M}")
+print(f"Calculated Contra-Harmonic Mean (CHM): {chm_value:.2f}")
+
+# 4. Replace all values strictly less than CHM with 0 (without loops)
+M_modified = M.copy()
+M_modified[M_modified < chm_value] = 0
+
+print(f"\nModified Matrix M_modified (values < CHM set to 0):\n{M_modified}")
+
+# 5. Calculate the dot product of this modified matrix with its own transpose
+M_final = M_modified @ M_modified.T
+
+print(f"\nFinal Resulting Matrix (M_modified @ M_modified.T):\n{M_final}")
+
+# 6. Visualize the final resulting matrix using a Seaborn heatmap
+plt.figure(figsize=(8, 7))
+sns.heatmap(M_final, annot=True, fmt=".2f", cmap="viridis")
+plt.title("Heatmap of the Dot Product of Modified Matrix with its Transpose")
+plt.xlabel("Columns")
+plt.ylabel("Rows")
+plt.tight_layout()
+plt.show()
+```
+
+Notes:
+- The CHM calculation requires the input array to be flattened to treat the entire matrix as a single dataset.
+- Boolean indexing (`M_modified[M_modified < chm_value] = 0`) efficiently performs the replacement without explicit loops.
+- The final matrix is symmetric since $A A^T = (A A^T)^T$. The heatmap visualizes this resulting structure.
+
+(2)
