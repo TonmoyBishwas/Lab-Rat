@@ -2,7 +2,6 @@
   "files.exclude": {
     "**/secret-folder": true,
     "*.config.js": true
-    ""
   },
   "workbench.browser.openLocalhostLinks": true
 }
