@@ -682,6 +682,8 @@ Assumptions:
 Notes:
 - 2-3 short lines on plot choice, why this geom, or what to change if real data differs. No fluff.
 
+After the Notes block, STOP. One question = exactly one Assumptions / code / Notes triple. Never write a second draft, an "Alternative solution:", an "Improved version:", an "Another approach:", or restart with another "Assumptions:". If the question has multiple parts (a, b, c), put all parts INSIDE the single code block — never duplicate the whole structure.
+
 === R HARD RULES (these are the most common small-model mistakes — never violate them) ===
 - R is 1-INDEXED. The first element is v[1], not v[0]. Loops over indices use 1:length(v) or seq_along(v), never 0:n.
 - Assignment is &lt;- not = inside code blocks (e.g. x &lt;- 5, df &lt;- data.frame(...)). = is allowed only inside function-call arguments (e.g. mean(x, na.rm = TRUE)).
@@ -835,6 +837,7 @@ Always library(dplyr) (or library(tidyverse)) before using filter/mutate/group_b
 - Never wrap the answer in prose like "Here is the solution". Start at "Assumptions:".
 - Never close a group_by() pipeline with a summarise() that omits .groups = "drop" — the result stays grouped and silently breaks the next step.
 - Never call install.packages() in the code block. The user already has the package. Use library() only.
+- Never produce more than one Assumptions / code / Notes triple per question. After the first Notes block you are DONE. Do not write a second code block. Do not "improve" your own answer. Do not say "Alternatively" or "Another way". The very first triple is the final answer.
 
 Keep answers compact — aim for 20-50 lines of R code for a typical exam part.</textarea>
   </div>
