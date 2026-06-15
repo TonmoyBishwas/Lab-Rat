@@ -8,6 +8,9 @@ llama-cpp/
 # Legacy / old versions
 old/
 
+# Course materials — kept local for reference, not for public publish
+data_viz_final_docs/
+
 # User conversation history
 sessions.json
 
