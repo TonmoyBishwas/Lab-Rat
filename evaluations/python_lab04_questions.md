@@ -92,16 +92,23 @@ to the prompt.*
 
 ## Q6 — HARD · Multi-checkpoint quantile-anchored colormap
 
-For the same matrix `M` from Q5, build a custom **piecewise colormap** whose
-colour stops are anchored at the 5th, 50th, and 95th quantiles of `M` (colours:
-navy → white → darkred). Normalise the stop positions to `[0, 1]` using
-`(q - vmin) / (vmax - vmin)`. Deduplicate stops that are within `1e-6` of each
-other. Pass the cmap to `sns.heatmap` with the same `vmin`/`vmax`.
+Generate this noisy matrix (paste the block verbatim along with the question
+text — the launcher does NOT remember Q5):
+```python
+np.random.seed(0)
+M = np.random.normal(0, 1, (50, 50))
+M[::5, ::5] += 20
+```
+Build a custom **piecewise colormap** whose colour stops are anchored at the
+5th, 50th, and 95th quantiles of `M` (colours: navy → white → darkred).
+Normalise the stop positions to `[0, 1]` using `(q - vmin) / (vmax - vmin)`.
+Deduplicate stops that are within `1e-6` of each other. Pass the cmap to
+`sns.heatmap` with the same `vmin`/`vmax`.
 
 *Probes: the worked-example structure of multi-checkpoint
 `LinearSegmentedColormap.from_list` — specifically that the model uses the
 COMPUTED normalised positions and does not silently fall back to the bare
-colour list.*
+colour list. Self-contained so the model cannot drift to a fresh matrix.*
 
 ---
 
