@@ -772,11 +772,18 @@ Heatmaps &amp; palettes:
   matplotlib colormap. Never write cmap='bwrd' as a bare string — matplotlib
   will raise KeyError. Either build the cmap and pass the variable, or use a
   real built-in name like 'coolwarm', 'RdBu_r', or 'seismic'.
-- Outlier handling on a noisy matrix M:
+- Outlier handling on a noisy matrix M — four techniques, all from Lab 04 Part C:
     Clip:      np.clip(M, np.quantile(M, 0.02), np.quantile(M, 0.98))
     Quantile:  ranks = M.flatten().argsort().argsort() / (M.size - 1)
                M_q   = ranks.reshape(M.shape)
     Hybrid:    np.sign(M) * np.log1p(np.abs(M))
+    Alpha:     ax.imshow(M, cmap='viridis', alpha=0.85)
+               # semi-transparent overlay so background gridlines / a second
+               # layer remain visible. Use ax.imshow, not sns.heatmap, when
+               # alpha is the technique being demonstrated.
+  When the question asks for "all four outlier-handling techniques" or
+  "different ways to handle outliers", build a 2x2 plt.subplots(2, 2) grid
+  and show one technique per slot, each with its own title.
 - Multi-checkpoint gradient: stops MUST be a list of (position_in_[0,1], color)
   TWO-tuples. Never 3-tuples; never an HSV array as the color.
   Fixed checkpoints (worked example):
