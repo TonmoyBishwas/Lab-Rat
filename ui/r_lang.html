@@ -787,8 +787,9 @@ Base R plotting (only when the question says "base R plot" or "plot()"):
   boxplot(mpg ~ cyl, data = mtcars, main = "...")
 
 === dplyr RECIPES ===
-Always library(dplyr) (or library(tidyverse)) before using filter/mutate/group_by.
+Always library(dplyr) before using filter/mutate/group_by. Never library(tidyverse) — see anti-patterns.
 
+DATA FRAME context (column has a name in a df):
 - Filter:    df |&gt; filter(age &gt; 25, dept == "DS")
 - Mutate:    df |&gt; mutate(bmi = weight / (height/100)^2)
 - Select:    df |&gt; select(name, age, dept)
@@ -798,13 +799,34 @@ Always library(dplyr) (or library(tidyverse)) before using filter/mutate/group_b
       group_by(species) |&gt;
       summarise(mean_pl = mean(Petal.Length, na.rm = TRUE), .groups = "drop") |&gt;
       arrange(desc(mean_pl))
-- case_when (the preferred ifelse for &gt;2 cases):
+- case_when INSIDE a data frame (adding a new column):
     df |&gt; mutate(letter = case_when(
       score &gt;= 80 ~ "A",
       score &gt;= 65 ~ "B",
       score &gt;= 50 ~ "C",
       TRUE         ~ "F"
     ))
+
+BARE VECTOR context (no data frame, just a 1D vector — e.g. FizzBuzz):
+case_when() and ifelse() are STANDALONE FUNCTIONS. They take formulas
+(LHS ~ RHS) directly as arguments. They are NOT pipe-targets and they do
+NOT need mutate(). Assign the result to a name with &lt;-, then print it.
+
+Vectorised FizzBuzz on a bare vector — copy this template verbatim:
+    library(dplyr)
+    x &lt;- 1:30
+    result &lt;- case_when(
+      x %% 15 == 0 ~ "FizzBuzz",
+      x %% 3  == 0 ~ "Fizz",
+      x %% 5  == 0 ~ "Buzz",
+      TRUE         ~ as.character(x)
+    )
+    print(result)
+NO pipe. NO mutate. NO `x |&gt; case_when(...)`. The vector lives inside each
+formula's LHS, not on the left of |&gt;. Same shape works with ifelse:
+    result &lt;- ifelse(x %% 15 == 0, "FizzBuzz",
+              ifelse(x %% 3  == 0, "Fizz",
+              ifelse(x %% 5  == 0, "Buzz", as.character(x))))
 
 === STATS RECIPES ===
 - Correlation:        cor(x, y)   ;  cor(df[, c("a","b","c")])
@@ -840,6 +862,7 @@ Always library(dplyr) (or library(tidyverse)) before using filter/mutate/group_b
 - Never call library(tidyverse). Always library() the SPECIFIC packages you use: library(ggplot2), library(dplyr), library(lubridate), library(tidyr), library(readr). Bulk-importing tidyverse hides dependencies, slows startup, and silently fails when only part of tidyverse is installed.
 - Never call library(base). Base R is loaded automatically — typing library(base) is a no-op that signals the answer was written by someone who does not know R.
 - Never wrap a standalone vector operation in mutate(). mutate() works on data frame COLUMNS, never on bare vectors. For a vector `x`, write `result <- case_when(x %% 15 == 0 ~ "FizzBuzz", ...)` directly. Do NOT write `x |> mutate(result = case_when(...))` — that errors because `x` is not a data frame. The same rule applies to summarise(), select(), filter(), arrange() — pipe a data frame into them, never a bare vector.
+- Never pipe a bare vector into case_when() either. case_when() takes formulas (LHS ~ RHS) as its arguments — it is NOT a pipe target. `x |> case_when(...)` errors with "Case 1 (`x`) must be a two-sided formula, not an integer vector." The right call is `result <- case_when(x %% 15 == 0 ~ "FizzBuzz", x %% 3 == 0 ~ "Fizz", ...)` with NO pipe and NO mutate. The vector belongs INSIDE each formula's LHS.
 - Never write defensive `if (!exists("mtcars"))` / `if (!exists("iris"))` fallbacks for built-in datasets. mtcars, iris, airquality, etc. are part of the `datasets` package which is attached at R startup. They are always available. Defensive fallbacks are noise.
 - Never produce more than one Assumptions / code / Notes triple per question. After the first Notes block you are DONE. Do not write a second code block. Do not "improve" your own answer. Do not say "Alternatively" or "Another way". The very first triple is the final answer.
 
