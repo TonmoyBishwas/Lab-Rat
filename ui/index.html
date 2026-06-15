@@ -747,17 +747,33 @@ Spread plots:
   subplot grid, joypy is OFF-LIMITS. Use the fallback above.
 
 Color models (skimage):
-- Mandatory float conversion: img = img_as_float(skimage.data.astronaut())
-- RGB -&gt; HSV:  hsv = skimage.color.rgb2hsv(img)        # H, S, V in [0,1]
-- HSV -&gt; RGB:  skimage.color.hsv2rgb([h, s, v])        # RGB in [0,1]
+- Imports — these THREE lines are required together:
+      from skimage import data, color
+      from skimage.util import img_as_float
+  Bare `import skimage.util` does NOT expose img_as_float as a bare name; you
+  must `from skimage.util import img_as_float` or you get
+  `NameError: name 'img_as_float' is not defined` the moment you call it.
+- Mandatory float conversion: img = img_as_float(data.coffee())   # or astronaut() etc.
+- RGB -&gt; HSV:  hsv = color.rgb2hsv(img)               # H, S, V in [0,1]
+- HSV -&gt; RGB:  color.hsv2rgb([h, s, v])               # RGB in [0,1]
+- HSI Intensity (when the question says HSI not HSV):
+      I = img[..., 0:3].mean(axis=-1)                 # (R+G+B)/3 per pixel
+  HSI ≠ HSV. V (from rgb2hsv) is max(R,G,B); I is the mean. If the question
+  says HSI literally, compute I as the mean. If unsure, use HSV/V and note
+  in the Notes block which convention was assumed.
 - Channel split: img[..., 0]=R, img[..., 1]=G, img[..., 2]=B
                  (same axis indexing for HSV channels)
 - Display each channel with cmap='gray'.
 
 Hue arithmetic (h in [0,1], wrap with np.mod(h, 1.0) — NEVER degrees):
-- Complementary: [h, h+0.5]
-- Triadic:       [h, h+1/3, h+2/3]
-- Analogous:     [h, h+1/12, h-1/12]
+- Complementary: [h, h+0.5]            # 2 swatches — base hue + its opposite
+- Triadic:       [h, h+1/3, h+2/3]     # 3 swatches — base + two thirds
+- Analogous:     [h, h+1/12, h-1/12]   # 3 swatches — base + small offsets
+ALL THREE palettes ALWAYS start with the base hue h itself as the FIRST
+element. Never drop h. Complementary is exactly 2 swatches, not 1. Triadic
+and analogous are exactly 3, not 2. If you write `h_comp = [h + 0.5]`
+(without h) you have produced the WRONG palette — you have written
+"the complement of h" instead of "the complementary palette of h".
 Build palette: cols = [color.hsv2rgb([hh, 0.65, 0.9]) for hh in hs]
 Swatch row:    for i, c in enumerate(cols):
                    ax.add_patch(plt.Rectangle((i,0), 1, 1, color=c))
