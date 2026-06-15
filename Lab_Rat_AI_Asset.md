@@ -15,7 +15,7 @@
 * **User interaction:** Double-click a `.bat` launcher → browser opens automatically to a local chat UI. Power BI mode adds a live "N tables, M cols detected" indicator and a Refresh button.
 
 ## 🚀 Current State & Maturity
-* **Working, in-use personal prototype** — functional end-to-end with polished launchers, troubleshooting docs, and bundled offline dependencies. Not a throwaway script collection; it's a coherent two-mode appliance (general DV-lab mode + Power BI mode).
+* **Working, in-use personal prototype** — functional end-to-end with polished launchers, troubleshooting docs, and bundled offline dependencies. Not a throwaway script collection; it's a coherent three-mode appliance (general Python DV-lab mode + Power BI mode + R / tidyverse / ggplot2 mode). Each mode is one Python launcher script subclassing a shared `UIHandler`, plus one single-file HTML UI carrying a hand-tuned curriculum prompt — a clean fork-per-domain pattern.
 * **Blockers to monetization as-is:**
   * Single-user, localhost-bound, **no auth, no multi-tenancy, no sandboxing** of the proxy.
   * Hyper-specialized: the value-add prompt is hardcoded to one university course (UIU DS 3522). It must be re-authored per customer/domain to be reusable.
