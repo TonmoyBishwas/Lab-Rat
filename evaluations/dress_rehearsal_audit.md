@@ -58,3 +58,42 @@ paper. The system is ready.
 ## Tag
 
 This state is tagged `v2026.06-exam-ready` on origin/main.
+
+---
+
+## Stress-test round (added after dress rehearsal)
+
+Once the dress rehearsal closed, the student raised a real concern: the
+synthetic banks and the dress rehearsal both passed, but neither tested
+whether the model would respect the paper's literal imports list. The
+paper allows `library(ggplot2)` only for R and (numpy, matplotlib.pyplot,
+colorsys, skimage data+color) only for Python. The prompts were freely
+reaching for dplyr, lubridate, pandas, seaborn — green on the synthetic
+banks because those banks tested recipes, not exam-grading discipline.
+
+Commit `baeea82` added EXAM IMPORT DISCIPLINE blocks to both prompts.
+
+A 4-question stress-test bank (`stress_test_questions.md`) probed nearby-
+but-not-identical exam shapes under the strict imports rule:
+
+| Q | Verdict | Detail |
+|---|---|---|
+| RQ1 mtcars histogram | PASS | library(ggplot2) only, geom_histogram(bins=10), plot saved. |
+| RQ2 iris boxplot | PASS | library(ggplot2) only, fill=Species in aes, plot saved. |
+| RQ3 airquality scatter + NA filter | PASS — the load-bearing test | Base-R airquality[!is.na(airquality$Ozone), ], NO library(dplyr). The discipline rule held against a question where dplyr is the obvious idiom. |
+| PQ1 colorsys triadic | Round 1 FAIL → Round 2 PASS | First attempt: `colorsys.hsv_to_rgb([h, s, v])` TypeError (wrong signature) + missing np.mod wrap. Fixed in commit `3f53b3e` by adding a 'colorsys vs skimage signatures' section and a mandatory-np.mod-before-list-comprehension recipe. Round 2 produced clean three-arg call + pre-comprehension wrap. |
+
+### Final state across all evaluation work
+
+| Bank | Scope | Final |
+|---|---|---|
+| Synthetic Python (Lab 04) | 8 Qs | 8/8 |
+| Synthetic R (assignment_task.pdf) | 8 Qs | 8/8 |
+| Real exam paper, another section | 5 Qs | 5/5 |
+| Stress-test (likely variations) | 4 Qs | 4/4 |
+
+Total 25/25 across four banks, three of them against material the same
+teacher actually grades to.
+
+This state is tagged `v2026.06-stress-tested` on origin/main, superseding
+`v2026.06-exam-ready` as the truly-final-ready milestone.
