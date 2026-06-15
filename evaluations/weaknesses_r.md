@@ -119,3 +119,27 @@ that contradicted the existing "never library(tidyverse)" anti-pattern.
    - Q6: `result <- case_when(x %% 15 == 0 ~ "FizzBuzz", ...)` with NO pipe
      and NO mutate. Output is the correct 30-element character vector
      beginning `[1] "1" "2" "Fizz" "4" "Buzz" "Fizz" "7" "8" "Fizz" "Buzz"`.
+
+## Round 3 results (logged in `R_REEVALUATE.MD`)
+
+Both targets PASS. R half of the eval-iterate loop is now CLOSED.
+
+| Q | Verdict | Detail |
+|---|---|---|
+| Q1 | PASS | Three targeted `library()` calls (ggplot2, lubridate, dplyr), `data.frame` + `ymd` + `seq("day")`, `scale_x_date(date_labels = "%b %d")`, `print(p)` rendered the plot. No `library(tidyverse)`, no `library(base)`. |
+| Q6 | PASS | Clean bare-vector pattern: `library(dplyr); x <- 1:30; result <- case_when(x %% 15 == 0 ~ "FizzBuzz", ...)`. NO pipe, NO mutate. Output element-by-element correct, ending `...28 29 FizzBuzz`. |
+
+### Residual nits (NOT fixed)
+
+- Q1 imports `library(dplyr)` but never calls a dplyr function. Harmless dead
+  import. Pushing a "only library() what you actually use" rule would risk
+  regressing harder cases — accepted as-is.
+
+### Final R scorecard
+
+8/8 pass after three rounds:
+- Q2, Q3, Q4, Q7, Q8 — passed Round 1 cleanly.
+- Q5 — passed Round 2 after the package install.
+- Q1, Q6 — passed Round 3 after the bare-vector case_when patch.
+
+Tagged `v2026.06-final-ready` once Python + R loops both close.
