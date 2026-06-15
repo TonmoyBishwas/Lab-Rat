@@ -743,6 +743,27 @@ Functions:
 - Anonymous (R 4.1+): \(x) x^2
 - Last expression is returned automatically; return() is optional.
 
+=== EXAM IMPORT DISCIPLINE — critical rule, read first ===
+The DS 3522 final exam paper lists ONLY `library(ggplot2)` in its allowed
+imports for R. A strict marker docks marks for any library outside that
+list — including `dplyr`, `lubridate`, `tidyr`, `readr`. Default behaviour:
+
+- Use ONLY `library(ggplot2)` + base R unless the question explicitly says
+  "use dplyr" or "use the tidyverse" or names a package in its text.
+- For data wrangling, use BASE R, not dplyr:
+    base R subsetting:   df[df$col == value, ]
+    base R column add:   df$new <- ifelse(df$x > k, "yes", "no")
+    base R group means:  aggregate(Petal.Length ~ Species, data = iris, FUN = mean)
+    base R sort:         df[order(df$col, decreasing = TRUE), ]
+- For dates, use BASE R, not lubridate:
+    base R date:         as.Date("1973-07-01")
+    base R sequence:     seq(as.Date("2026-06-01"), by = "day", length.out = 30)
+- ggplot2 itself is always allowed; that is the one library the paper lists.
+
+dplyr / lubridate are ONLY acceptable when the question text uses the word
+"pipe" / "%>%" / "|>" / "tidyverse" / "dplyr" / "lubridate". Otherwise stick
+to base R. Below recipes show both forms — pick the base-R one by default.
+
 === BUILT-IN R DATASETS (every DV Lab question uses one of these — get the columns right) ===
 Getting a column name wrong is the most common source of runtime errors.
 Memorise the exact spelling and what each column means.
@@ -811,7 +832,35 @@ Base R plotting (only when the question says "base R plot" or "plot()"):
   hist(x, breaks = 30, col = "lightblue", main = "...")
   boxplot(mpg ~ cyl, data = mtcars, main = "...")
 
-=== dplyr RECIPES ===
+=== BASE R DATA-WRANGLING RECIPES (DEFAULT — use these on the exam) ===
+These cover every dplyr operation you would normally reach for, using only
+base R. No `library(dplyr)`, no `library(tidyverse)`. Safe under any imports
+list because base R is always loaded.
+
+- Filter rows:        df_sub  <- df[df$col == value, ]
+                      df_sub  <- df[df$col &gt; k &amp; df$other == "x", ]
+                      df_sub  <- subset(df, col &gt; k)         # subset() is also base R
+- Add a new column:   df$new  <- ifelse(df$score &gt;= 50, "P", "F")
+- Drop a column:      df$col  <- NULL
+- Select columns:     df_sub  <- df[, c("a", "b", "c")]
+- Sort:               df[order(df$col), ]                    # ascending
+                      df[order(df$col, decreasing = TRUE), ] # descending
+                      df[order(-df$col), ]                   # also descending
+- Group means:        aggregate(Petal.Length ~ Species, data = iris, FUN = mean)
+                      # multi-stat:
+                      aggregate(cbind(Petal.Length, Sepal.Length) ~ Species,
+                                data = iris, FUN = mean)
+- Tabulate counts:    table(iris$Species)
+- Apply across rows / cols of a matrix:
+                      apply(m, 1, sum)   # row sums
+                      apply(m, 2, mean)  # column means
+
+For dates without lubridate:
+- Parse:   d &lt;- as.Date("2026-06-15")
+- Sequence (30 daily dates): seq(as.Date("2026-06-01"), by = "day", length.out = 30)
+- Format: format(d, "%b %d") -&gt; "Jun 15"
+
+=== dplyr RECIPES (ONLY when the question explicitly names dplyr, the pipe, or the tidyverse) ===
 Always library(dplyr) before using filter/mutate/group_by. Never library(tidyverse) — see anti-patterns.
 
 DATA FRAME context (column has a name in a df):
