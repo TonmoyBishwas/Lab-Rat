@@ -771,7 +771,9 @@ Spread plots:
   Rule of thumb: if the question says "1x2", "2x1", "2x2", "2x3", or any
   subplot grid, joypy is OFF-LIMITS. Use the fallback above.
 
-Color models (skimage):
+Color models — TWO different libraries with TWO different signatures:
+
+skimage (for IMAGE-channel work, e.g. splitting RGB / HSV of an image):
 - Imports — these THREE lines are required together:
       from skimage import data, color
       from skimage.util import img_as_float
@@ -780,7 +782,19 @@ Color models (skimage):
   `NameError: name 'img_as_float' is not defined` the moment you call it.
 - Mandatory float conversion: img = img_as_float(data.coffee())   # or astronaut() etc.
 - RGB -&gt; HSV:  hsv = color.rgb2hsv(img)               # H, S, V in [0,1]
-- HSV -&gt; RGB:  color.hsv2rgb([h, s, v])               # RGB in [0,1]
+- HSV -&gt; RGB:  color.hsv2rgb([h, s, v])               # 1D LIST input, array out
+
+colorsys (Python stdlib, for HUE-ARITHMETIC / colour-harmony work):
+- Import: `import colorsys` — already in the exam paper's allowed list.
+- HSV -&gt; RGB:  colorsys.hsv_to_rgb(h, s, v)           # THREE POSITIONAL FLOATS, tuple out
+- Calling `colorsys.hsv_to_rgb([h, s, v])` raises:
+      TypeError: hsv_to_rgb() missing 2 required positional arguments: 's' and 'v'
+  Do NOT copy the skimage list-arg pattern when you switched to colorsys.
+
+WHICH to use:
+- skimage.color.hsv2rgb       — when working with images / arrays / Q5-style channels
+- colorsys.hsv_to_rgb         — when working with individual hue values / palettes /
+                                 Q4-style colour harmony. This is the paper's listed import.
 - HSI Intensity (when the question says HSI not HSV):
       I = img[..., 0:3].mean(axis=-1)                 # (R+G+B)/3 per pixel
   HSI ≠ HSV. V (from rgb2hsv) is max(R,G,B); I is the mean. If the question
@@ -799,6 +813,16 @@ element. Never drop h. Complementary is exactly 2 swatches, not 1. Triadic
 and analogous are exactly 3, not 2. If you write `h_comp = [h + 0.5]`
 (without h) you have produced the WRONG palette — you have written
 "the complement of h" instead of "the complementary palette of h".
+
+np.mod(h, 1.0) wrap is MANDATORY before calling hsv_to_rgb / hsv2rgb:
+- Triadic h+1/3 and h+2/3 can exceed 1.0 (with h=0.7 you get 1.033 and 1.367).
+- Analogous h-1/12 can be negative (with h=0.0 you get -0.0833).
+- Both produce wrong colours without the wrap. Apply np.mod to the WHOLE
+  hue list BEFORE the list comprehension:
+      hues = np.mod([h, h+1/3, h+2/3], 1.0)
+      cols = [colorsys.hsv_to_rgb(hh, 0.65, 0.9) for hh in hues]
+  Note the THREE-arg call into colorsys.hsv_to_rgb, not the skimage-style
+  list. See "Color models" above for the signature difference.
 Build palette: cols = [color.hsv2rgb([hh, 0.65, 0.9]) for hh in hs]
 Swatch row:    for i, c in enumerate(cols):
                    ax.add_patch(plt.Rectangle((i,0), 1, 1, color=c))
