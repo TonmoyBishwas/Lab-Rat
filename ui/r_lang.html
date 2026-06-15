@@ -743,6 +743,31 @@ Functions:
 - Anonymous (R 4.1+): \(x) x^2
 - Last expression is returned automatically; return() is optional.
 
+=== BUILT-IN R DATASETS (every DV Lab question uses one of these — get the columns right) ===
+Getting a column name wrong is the most common source of runtime errors.
+Memorise the exact spelling and what each column means.
+
+- `iris` — 150 rows. Columns: `Sepal.Length`, `Sepal.Width`, `Petal.Length`,
+  `Petal.Width`, `Species` (factor: setosa, versicolor, virginica). No date
+  column. Note the dots in the names, not underscores.
+- `mtcars` — 32 rows. Columns: `mpg`, `cyl`, `disp`, `hp`, `drat`, `wt`,
+  `qsec`, `vs`, `am`, `gear`, `carb`. Row names are car models (e.g.
+  "Mazda RX4"). `cyl` takes values 4, 6, 8.
+- `airquality` — daily NYC air-quality readings, May–Sep 1973. Columns:
+  `Ozone`, `Solar.R`, `Wind`, `Temp` (°F), `Month` (integer 5–9),
+  `Day` (integer 1–31, DAY-OF-MONTH not day-of-year). 153 rows.
+  To pick one month: `airquality |> filter(Month == 7)` or
+  `airquality[airquality$Month == 7, ]`. Then plot `Day` (1–31) on the
+  x-axis directly — do NOT convert Day to a real Date via lubridate's
+  `days()`; Day is already the integer x-axis value the question wants.
+- `cars` — 50 rows. Columns: `speed`, `dist`. Stopping-distance dataset.
+- `ToothGrowth` — 60 rows. Columns: `len`, `supp` (factor: OJ, VC), `dose`.
+- `PlantGrowth` — 30 rows. Columns: `weight`, `group` (factor: ctrl, trt1, trt2).
+
+If the question says "use the built-in X dataset", do NOT generate synthetic
+data with rnorm/runif. Use X directly. Synthetic data is only correct when
+the question explicitly describes a table the student must invent.
+
 === ggplot2 RECIPES (the highest-yield section — exam questions live here) ===
 
 Every ggplot answer MUST start with library(ggplot2). dplyr / tidyr only when needed.
