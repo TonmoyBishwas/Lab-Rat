@@ -112,16 +112,20 @@ colour list. Self-contained so the model cannot drift to a fresh matrix.*
 
 ---
 
-## Q7 — TRICK · Ridgeline of 8 groups inside a 2×4 subplot grid
+## Q7 — TRICK · Stacked-KDE ridgeline of 8 groups on a single axes
 
 Generate synthetic data for 8 groups (A–H), each with 200 samples drawn from a
-normal distribution with a different mean. Plot a **ridgeline (joypy-style)
-visualisation** with each ridge inside its own slot of a `2×4 plt.subplots`
-grid.
+normal distribution with a different mean. Plot a **ridgeline**: 8 stacked KDE
+curves on a SINGLE set of axes, each curve vertically offset by its group
+index, with group names on the y-axis tick labels. Do this without
+`joypy.joyplot`. Use `scipy.stats.gaussian_kde` and the stacked
+`fill_between(xs, i - dens, i + dens, ...)` pattern from the prompt.
 
-*Trick: this should NOT use `joypy.joyplot`. The prompt mandates the manual
-stacked-KDE fallback whenever the question lives inside a subplot grid. If the
-model uses joypy in any slot, mark this as a failure.*
+*Trick: a real ridgeline is one axes with stacked curves, NOT a grid of
+independent density plots. The model must produce the canonical stacked-KDE
+fallback from the prompt — one figure, one axes, 8 ridges. The original
+phrasing of this question ("in a 2×4 grid") was misleading and is fixed here.
+If the model splits into multiple subplots, that is a failure.*
 
 ---
 
