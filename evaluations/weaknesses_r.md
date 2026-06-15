@@ -83,3 +83,39 @@ Before tagging `v2026.06-final-ready`, complete two steps:
    - Q6 writes `result <- case_when(...)` (or `ifelse(...)`) on the bare
      vector `x` with NO `mutate()` and NO pipe into mutate. Output is the
      correct 30-element character vector.
+
+## Round 2 results (logged in `R_REEVALUATE.MD`)
+
+Mixed. One win, one regression with a new failure mode, one re-test was
+mis-pasted under the wrong heading.
+
+| Q | Verdict | Detail |
+|---|---|---|
+| Q1 | NOT TESTED | The FizzBuzz answer was pasted under the Q1 heading by mistake. Q1 line chart was not actually re-run. |
+| Q5 | PASS | `library(dplyr)` + clean group_by → summarise(.groups="drop") → arrange(desc) pipeline. Output is the correct virginica/versicolor/setosa tibble. The install fixed it. |
+| Q6 | STILL FAILING (new mode) | Model learned to drop `mutate()` but discovered a different wrong pattern: `numbers \|> case_when(...)`. Errors with "Case 1 (`numbers`) must be a two-sided formula, not an integer vector." The Round 1 anti-pattern banned mutate-on-vector but did not explicitly ban piping into case_when. |
+
+## Round 2 fix (committed in `2c61f9d`)
+
+The R prompt's dplyr section was reworked to make the data-frame vs.
+bare-vector split explicit, with a copy-this-verbatim FizzBuzz template for
+the bare-vector case. A second anti-pattern bullet was added that quotes the
+exact runtime error message the model just produced, so the rule is
+semantically anchored to the failure.
+
+Also removed a stale "(or library(tidyverse))" hint from the recipes intro
+that contradicted the existing "never library(tidyverse)" anti-pattern.
+
+## Round 3 gate (next re-evaluation)
+
+1. **Hard-refresh the browser** (Ctrl+F5 on `localhost:8080` after starting
+   `python start_r.py`). The system prompt is set when the page loads — an
+   already-open tab keeps the OLD prompt in its textarea even though the
+   server file changed. Verify by opening Settings and confirming the
+   prompt contains the "BARE VECTOR context" subsection.
+2. **Re-run Q1 and Q6 only** (Q5 already passed Round 2). Confirm:
+   - Q1: line chart renders, uses individual library() calls, dates format
+     as `Jun 01`.
+   - Q6: `result <- case_when(x %% 15 == 0 ~ "FizzBuzz", ...)` with NO pipe
+     and NO mutate. Output is the correct 30-element character vector
+     beginning `[1] "1" "2" "Fizz" "4" "Buzz" "Fizz" "7" "8" "Fizz" "Buzz"`.
