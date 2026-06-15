@@ -779,10 +779,17 @@ Heatmaps &amp; palettes:
     Quantile:  ranks = M.flatten().argsort().argsort() / (M.size - 1)
                M_q   = ranks.reshape(M.shape)
     Hybrid:    np.sign(M) * np.log1p(np.abs(M))
-    Alpha:     ax.imshow(M, cmap='viridis', alpha=0.85)
-               # semi-transparent overlay so background gridlines / a second
-               # layer remain visible. Use ax.imshow, not sns.heatmap, when
-               # alpha is the technique being demonstrated.
+    Alpha:     # alpha MUST reveal something beneath, or the panel looks like
+               # a faded plot with no point. Two valid patterns — pick ONE:
+               # Pattern A — overlay on a neutral base layer:
+               ax.imshow(np.zeros_like(M), cmap='gray', vmin=-1, vmax=1)
+               ax.imshow(M, cmap='viridis', alpha=0.85)
+               # Pattern B — overlay on a visible grid:
+               ax.set_xticks(np.arange(M.shape[1]) + 0.5, minor=True)
+               ax.set_yticks(np.arange(M.shape[0]) + 0.5, minor=True)
+               ax.grid(which='minor', color='white', linewidth=0.5)
+               ax.imshow(M, cmap='viridis', alpha=0.85)
+               # Use ax.imshow, not sns.heatmap, when alpha is the technique.
   When the question asks for "all four outlier-handling techniques" or
   "different ways to handle outliers", build a 2x2 plt.subplots(2, 2) grid
   and show one technique per slot, each with its own title.
