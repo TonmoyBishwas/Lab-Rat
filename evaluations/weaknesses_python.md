@@ -45,3 +45,27 @@ updated prompt and confirm:
 - Q5 alpha panel shows a visible base layer or grid through the transparency.
 - Q6 uses the inlined `M` definition without inventing a new matrix.
 - Q7 produces one axes with 8 stacked KDE ridges, not 8 subplots.
+
+## Round 2 results (re-eval against the fixed prompt + questions)
+
+All four targeted questions PASS. Logged in `PYTHON_LAB04_REEVALUATE.MD`.
+
+| Q | Verdict | Detail |
+|---|---|---|
+| Q4 | PASS | One triple, stops cleanly after Notes. The single-answer rule held. |
+| Q5 | PASS | Used Pattern B (white grid behind alpha imshow) and explicitly attributed the choice in Notes. The alpha panel now demonstrates what the technique is for. |
+| Q6 | PASS | Used the inlined seed/normal/`+= 20` block verbatim. cmap stops anchored at the 5/50/95 quantiles, normalised positions, deduplication present. |
+| Q7 | PASS | Single axes, 8 stacked ridges, y-ticks set to group names. The "no joypy" trick aspect held. |
+
+### Residual nits (intentionally NOT fixed — over-tuning risk)
+
+- Q7 stacked ridges: model used raw `dens = kde(xs)` instead of the
+  `dens = dens / dens.max() * 0.4` normalisation the prompt's fallback recipe
+  shows. Ridges may be unevenly scaled. Structure is correct, answer earns
+  marks. Prompt already teaches the normalisation — pushing further risks
+  over-fitting.
+- Q7 Notes prose: model wrote "plt.fill_between_x" (no such function — it is
+  `plt.fill_betweenx`). Inside Notes prose, not the code, so harmless.
+
+Python half of the eval-iterate loop is now CLOSED. Tag `v2026.06-final-ready`
+can be applied once the R half of the loop reaches the same closed state.
