@@ -1,0 +1,9 @@
+{
+  "id": "dataviz-python",
+  "name": "Data Visualization Lab - Python",
+  "title": "Jupyter Notebook",
+  "tagline": "Offline Python and data visualization assistant.",
+  "temperature": 0.3,
+  "max_tokens": 4096,
+  "models": []
+}

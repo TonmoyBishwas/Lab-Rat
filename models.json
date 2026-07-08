@@ -1,0 +1,37 @@
+{
+  "_comment": "Model registry. 'priority' is the global fallback order used when a course does not pin its own list in course.json 'models'. Each entry: ctx = context window to request (RAM-bound, not the model's max), flags = extra llama-server flags. All models must be Q4_K_M-class quants that fit 16 GB RAM CPU-only.",
+  "priority": [
+    "gemma-4-E4B-it-Q4_K_M.gguf",
+    "Mellum2-12B-A2.5B-Instruct-Q4_K_M.gguf",
+    "Qwen3.5-9B-Q4_K_M.gguf",
+    "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
+    "Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf"
+  ],
+  "models": {
+    "gemma-4-E4B-it-Q4_K_M.gguf": {
+      "ctx": 16384,
+      "flags": [],
+      "notes": "Apr 2026, dense, thinking off by default. Validated 25/25 on DV Lab eval banks (June 2026). Current safe default."
+    },
+    "Mellum2-12B-A2.5B-Instruct-Q4_K_M.gguf": {
+      "ctx": 16384,
+      "flags": [],
+      "notes": "JetBrains, May 2026. MoE 12B total / 2.5B active - fast on CPU. LiveCodeBench v6 69.9 (vs Gemma 4 E4B ~52). Answers directly, no chain of thought. NOT yet eval-validated for this course - run eval/run_eval.py before making it primary."
+    },
+    "Qwen3.5-9B-Q4_K_M.gguf": {
+      "ctx": 12288,
+      "flags": ["--reasoning-budget", "0"],
+      "notes": "Mar 2026, dense 9B, strongest reasoning per GB (GPQA 81.7). Thinking DISABLED via --reasoning-budget 0 (needs llama.cpp >= b8148; the old enable_thinking chat-template kwarg does NOT work). Dense 9B is slow on this CPU (~5-7 tok/s) - use only if quality gaps show up that Mellum/Gemma can't close."
+    },
+    "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf": {
+      "ctx": 16384,
+      "flags": [],
+      "notes": "Nov 2024 legacy code specialist. Fallback only."
+    },
+    "Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf": {
+      "ctx": 8192,
+      "flags": [],
+      "notes": "Slow (~3 tok/s). Last-resort quality fallback."
+    }
+  }
+}

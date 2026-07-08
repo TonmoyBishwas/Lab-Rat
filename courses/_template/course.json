@@ -1,0 +1,9 @@
+{
+  "id": "REPLACE-ME",
+  "name": "Course Name - Mode",
+  "title": "Browser Tab / Logo Title",
+  "tagline": "One-line description shown on the welcome screen.",
+  "temperature": 0.3,
+  "max_tokens": 4096,
+  "models": []
+}

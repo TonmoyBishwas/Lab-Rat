@@ -1,0 +1,9 @@
+{
+  "id": "dataviz-r",
+  "name": "Data Visualization Lab - R",
+  "title": "RStudio",
+  "tagline": "Offline R / tidyverse / ggplot2 assistant.",
+  "temperature": 0.3,
+  "max_tokens": 4096,
+  "models": []
+}

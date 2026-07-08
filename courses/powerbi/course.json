@@ -1,0 +1,11 @@
+{
+  "id": "powerbi",
+  "name": "Data Visualization Lab - Power BI",
+  "title": "DAX Studio",
+  "tagline": "Offline Power BI / DAX / M assistant grounded in your open model.",
+  "temperature": 0.3,
+  "max_tokens": 4096,
+  "models": [],
+  "launcher": "start_powerbi.py",
+  "_note": "Special mode: launched via start_powerbi.py which injects live .pbix schema into {MODEL_CONTEXT} inside prompt.md. ui/powerbi.html is still the UI for this course."
+}

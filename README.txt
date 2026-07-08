@@ -3,134 +3,126 @@ Lab Rat AI - Portable Offline Local AI
 
 QUICK START
 -----------
-1. Download a model:
+1. Download a model (at home, needs internet):
      Run: download-model.bat
-     Choose option 1 (Gemma 4 E4B-it Q4_K_M, ~5.0 GB) — recommended.
-     Wait for download to finish.
+     Option 1 (Gemma 4 E4B, ~5.0 GB) is the eval-validated safe default.
+     Option 2 (Mellum 2, ~8.1 GB) is the faster/stronger candidate - run
+     the eval bank before trusting it in an exam (see eval\ folder).
 
-2. Pick a mode and start the AI:
-     launch-gemma4.bat   - Python / numpy / pandas / matplotlib / seaborn
-                           (the default Data Visualization Lab mode)
-     launch-powerbi.bat  - Power BI helper. Reads your open .pbix
-                           model and grounds DAX/M answers in your
-                           actual tables and relationships.
-     launch-r.bat        - R / tidyverse / dplyr / ggplot2 helper
-                           (for the R portion of the DV Lab exam)
+2. Pick a course and start the AI (fully offline, no admin needed):
+     launch-python.bat   - Data Viz Lab, Python / numpy / matplotlib mode
+     launch-r.bat        - Data Viz Lab, R / tidyverse / ggplot2 mode
+     launch-powerbi.bat  - Power BI helper. Reads your open .pbix model
+                           and grounds DAX/M answers in your actual tables.
 
-     A black console window will appear — keep it open.
+     A black console window will appear - keep it open.
      Wait 30-90 seconds for the model to load.
-     Your browser opens automatically.
+     Open the URL it prints (http://localhost:8080) in Chrome/Edge.
 
 3. Use it:
      Type your question and press Enter to send.
      Shift+Enter = new line inside your message.
      Drag & drop a .py, .r, .csv, .txt file onto the browser window.
-     The AI will read the file and answer questions about it.
 
 4. Stop:
      Close the black console window, or press Ctrl+C inside it.
 
-Important: the three modes share the same ports (11434 for the AI,
-8080 for the UI). Launching one mode automatically stops the other.
-You cannot run two modes at the same time.
+All modes share ports 11434 (AI) and 8080 (UI). Launching one mode
+automatically stops the other. You cannot run two modes at once.
+
+
+COURSES (the configurable part)
+-------------------------------
+Each mode is a folder under courses\:
+    courses\<id>\course.json   - name, browser title, temperature, etc.
+    courses\<id>\prompt.md     - the system prompt (the actual value here)
+    courses\<id>\evals\        - question banks + eval run logs
+
+launch-*.bat just runs:  python start.py <course-id>
+
+To add a NEW course (Data Analytics, Data Structures, ...):
+    1. Copy courses\_template to courses\<new-id> and fill both files in.
+    2. Copy launch-python.bat to launch-<name>.bat, change the course id.
+    3. Tune the prompt with the eval loop: eval\BLINDSPOT_WORKFLOW.md.
+No Python changes are needed.
 
 
 PORTABLE USE (USB / Lab PC)
 ----------------------------
-- No installation required. No admin rights needed.
-- Copy this entire folder to any Windows 10/11 PC and run a launcher
-  directly. Nothing is written to the registry.
-- Windows 10 version 1803 or later is required (for built-in curl.exe).
-
-
-FILE ATTACHMENT
----------------
-- Drag and drop files onto the browser window
-- Or click the paperclip (clip) button in the input bar
-- Supported: .py .r .txt .csv .json .md .log .ipynb .java .c .cpp
-- Multiple files can be attached to one message
-- The file content is read in your browser — nothing is uploaded anywhere
+- No installation required beyond Python (see SETUP_FOR_EXAM.md).
+- No admin rights needed. No internet needed after models are downloaded.
+- Copy this entire folder to any Windows 10/11 PC and run a launcher.
+- Windows 10 version 1803 or later (for built-in curl.exe).
 
 
 MODELS
 ------
-Primary (recommended):
-  Gemma 4 E4B-it Q4_K_M
-  - Filename: gemma-4-E4B-it-Q4_K_M.gguf
-  - Size:     ~5.0 GB
-  - Strong general code quality on Python and R, fits comfortably in
-    16 GB RAM, ~10-15 tok/sec on an i5 11/12th gen CPU.
+Registry: models.json (priority order, context size, per-model flags).
+Downloader: download-model.bat
 
-Code specialist (Python-heavy):
-  Qwen2.5-Coder-7B Instruct Q4_K_M (~4.7 GB, fastest)
-  Qwen2.5-Coder-14B Instruct Q4_K_M (~8.9 GB, highest Python quality
-    but slower and tighter on RAM).
+  gemma-4-E4B-it-Q4_K_M      ~5.0 GB  SAFE DEFAULT (eval-validated 25/25)
+  Mellum2-12B-A2.5B-Instruct ~8.1 GB  CODE CANDIDATE (MoE, fast on CPU,
+                                      much stronger coding scores - needs
+                                      eval validation before exam use)
+  Qwen3.5-9B                 ~5.7 GB  REASONING CANDIDATE (thinking disabled
+                                      via flag; slower - dense 9B)
+  Qwen2.5-Coder-7B           ~4.7 GB  LEGACY FALLBACK
 
-Download via: download-model.bat
+A model is picked automatically: course.json "models" list first, then
+models.json "priority" order - first file that exists in models\ wins.
+
+
+EVALUATIONS (finding the model's blindspots)
+--------------------------------------------
+  python eval\run_eval.py dataviz-python
+runs the course question bank against the local model and writes a
+timestamped log to courses\<id>\evals\runs\. Grade the log and patch the
+prompt with a Claude Code instance following eval\BLINDSPOT_WORKFLOW.md.
+Old (pre-redesign) eval logs live in evaluations\ - frozen history.
 
 
 TWEAKING PERFORMANCE
 --------------------
-Each launcher .bat invokes one of start.py / start_powerbi.py /
-start_r.py. To change threads, context size, or any llama-server
-flag, edit the matching .py file (look for the subprocess.Popen
-call with --threads, --ctx-size, etc.).
-
-Useful defaults:
-  THREADS = 8       - Set to the physical core count on the PC
-                      (i7-12700: 8-10; i5-12400: 4-6; i5-11xx: 4).
-  CTX     = 16384   - Context window in tokens. Drop to 8192 or 4096
-                      if the server crashes or uses too much RAM.
-
-The per-model context table lives in start.py (CTX_FOR dict).
+Threads auto-detect to half the logical core count (min 4). Context size
+is per-model in models.json - drop it if the server crashes on 16 GB.
 
 
 UPDATING LLAMA.CPP
 ------------------
-The AI engine (llama.cpp) occasionally releases faster CPU builds.
-Run update-llama-cpp.bat for instructions or auto-download.
-Manual: get llama-bXXXX-bin-win-avx2-x64.zip from
+Run update-llama-cpp.bat, or manually get
+llama-bXXXX-bin-win-avx2-x64.zip from
   https://github.com/ggml-org/llama.cpp/releases
-Extract all .exe and .dll into the llama-cpp\ folder.
+and extract all .exe/.dll into llama-cpp\. Current build: b8914.
+Qwen3.5 needs >= b8000; --reasoning-budget needs >= b8148.
 
 
 TROUBLESHOOTING
 ---------------
-"Server not connected" shown in browser:
-  - The launcher bat file is not running, or the model is still loading.
-  - Wait a bit longer (Gemma 4 E4B can take 60s on first load).
-  - Check that the model file exists in models\
-
-"Model not found" error in the black window:
+"Server not connected" in browser:
+  - The launcher is not running, or the model is still loading. Wait.
+  - Check the model file exists in models\
+"Model not found":
   - Run download-model.bat first.
-  - Make sure the model file lives in models\ with the original filename.
-
-Browser shows a blank page or nothing:
-  - Open the URL from the black console window manually in Chrome/Edge.
-  - Use a private/incognito window if a stale cache is suspected.
-
-Download interrupted mid-way:
-  - Re-run download-model.bat — it overwrites the partial file.
+Blank browser page:
+  - Open http://localhost:8080 manually; try a private window.
+Download interrupted:
+  - Re-run download-model.bat - it overwrites the partial file.
 
 
 FOLDER STRUCTURE
 ----------------
 Lab Rat\
   llama-cpp\           AI engine binaries (llama-server.exe etc.)
-  models\              GGUF model files go here
-  ui\
-    index.html         Default Python / data-viz UI
-    powerbi.html       Power BI helper UI
-    r_lang.html        R programming UI
-  start.py             Default launcher (used by launch-gemma4.bat /
-                       launch-qwen.bat)
-  start_powerbi.py     Power BI launcher (with msmdsrv schema bridge)
-  start_r.py           R launcher
-  launch-gemma4.bat    Start the default Python mode
-  launch-qwen.bat      Start the default mode, prefers Qwen models
-  launch-powerbi.bat   Start the Power BI helper
-  launch-r.bat         Start the R helper
-  download-model.bat   Download a model from Hugging Face
-  update-llama-cpp.bat Update the AI engine binaries
-  evaluations\         Exam-style question banks and model-response logs
-  old\                 Previous version (kept for reference)
+  models\              GGUF model files
+  courses\             per-course config + prompt + evals  <- THE VALUE
+  ui\index.html        generic chat UI (config-driven)
+  ui\powerbi.html      Power BI mode UI
+  eval\                eval runner + blindspot workflow
+  start.py             generic launcher (python start.py <course-id>)
+  start_powerbi.py     Power BI launcher (live .pbix schema bridge)
+  launch-*.bat         double-click entry points
+  models.json          model registry
+  download-model.bat   model downloader (needs internet)
+  update-llama-cpp.bat AI engine updater (needs internet)
+  evaluations\         pre-redesign eval logs (frozen)
+  old\                 previous versions (kept for reference)

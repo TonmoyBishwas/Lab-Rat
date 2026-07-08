@@ -11,21 +11,27 @@ MODELS_DIR = os.path.join(ROOT, "models")
 
 MODELS = [
     {
-        "name": "Gemma 4 E4B-it Q4_K_M  (~5.0 GB)  RECOMMENDED  |  Apr 3 2026, dense, thinking off by default",
+        "name": "Gemma 4 E4B-it Q4_K_M  (~5.0 GB)  SAFE DEFAULT  |  Apr 2026, dense, eval-validated 25/25 on DV Lab banks",
         "filename": "gemma-4-E4B-it-Q4_K_M.gguf",
         "url": "https://huggingface.co/unsloth/gemma-4-E4B-it-GGUF/resolve/main/gemma-4-E4B-it-Q4_K_M.gguf",
         "launcher": "python start.py",
     },
     {
-        "name": "Qwen2.5-Coder-7B Instruct Q4_K_M (~4.7 GB)  CODE-SPECIALIST  |  older but best Python code per GB",
-        "filename": "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
-        "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
+        "name": "Mellum 2 12B-A2.5B Instruct Q4_K_M (~8.1 GB)  CODE CANDIDATE  |  May 2026 JetBrains MoE, 2.5B active = fast on CPU, LiveCodeBench 69.9. Run evals before trusting it.",
+        "filename": "Mellum2-12B-A2.5B-Instruct-Q4_K_M.gguf",
+        "url": "https://huggingface.co/JetBrains/Mellum2-12B-A2.5B-Instruct-GGUF-Q4_K_M/resolve/main/Mellum2-12B-A2.5B-Instruct-Q4_K_M.gguf",
         "launcher": "python start.py",
     },
     {
-        "name": "Qwen2.5-Coder-14B Instruct Q4_K_M (~8.9 GB)  BEST QUALITY  |  slower, strongest local code at 16GB",
-        "filename": "Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf",
-        "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-14B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf",
+        "name": "Qwen3.5-9B Q4_K_M (~5.7 GB)  REASONING CANDIDATE  |  Mar 2026, thinking disabled via llama-server flag, slower (dense 9B)",
+        "filename": "Qwen3.5-9B-Q4_K_M.gguf",
+        "url": "https://huggingface.co/unsloth/Qwen3.5-9B-GGUF/resolve/main/Qwen3.5-9B-Q4_K_M.gguf",
+        "launcher": "python start.py",
+    },
+    {
+        "name": "Qwen2.5-Coder-7B Instruct Q4_K_M (~4.7 GB)  LEGACY FALLBACK  |  Nov 2024 code specialist",
+        "filename": "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
+        "url": "https://huggingface.co/bartowski/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
         "launcher": "python start.py",
     },
 ]
@@ -53,12 +59,13 @@ def main():
         print(f"  [{i}] {m['name']}")
         print()
 
+    valid = [str(i) for i in range(1, len(MODELS) + 1)]
     while True:
-        choice = input("  Enter choice (1/2/3): ").strip()
-        if choice in ("1", "2", "3"):
+        choice = input(f"  Enter choice ({'/'.join(valid)}): ").strip()
+        if choice in valid:
             model = MODELS[int(choice) - 1]
             break
-        print("  Please enter 1, 2, or 3.")
+        print(f"  Please enter one of: {', '.join(valid)}.")
 
     os.makedirs(MODELS_DIR, exist_ok=True)
     dest = os.path.join(MODELS_DIR, model["filename"])

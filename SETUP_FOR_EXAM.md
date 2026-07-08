@@ -170,10 +170,11 @@ Print this out. Tick each.
 - [ ] `import numpy, pandas, matplotlib, seaborn, scipy, skimage, joypy, palettable, colorsys` in a Jupyter cell shows no error.
 - [ ] `install.packages(c("tidyverse", "lubridate"))` runs in RStudio without errors.
 - [ ] `library(ggplot2); library(dplyr); library(tidyr); library(readr); library(lubridate)` in RStudio shows no error.
-- [ ] `python start.py` launches the Lab Rat AI Python mode and opens `localhost:8080` in the browser.
-- [ ] `python start_r.py` launches the R mode and opens `localhost:8080` in the browser.
+- [ ] `launch-python.bat` (= `python start.py dataviz-python`) launches the Python mode and opens `localhost:8080` in the browser.
+- [ ] `launch-r.bat` (= `python start.py dataviz-r`) launches the R mode and opens `localhost:8080` in the browser.
 - [ ] After launching, hard-refreshed the browser (Ctrl+F5) so the latest
   system prompt loads. The Settings textarea should contain the line
-  "EXAM IMPORT DISCIPLINE".
+  "EXAM IMPORT DISCIPLINE" (Python mode) — it is served from
+  `courses\<id>\prompt.md` now, not baked into the HTML.
 
 If every box is ticked, you are ready.

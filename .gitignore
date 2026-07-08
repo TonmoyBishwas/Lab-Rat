@@ -30,3 +30,6 @@ venv/
 
 # Claude Code local config
 .claude/
+
+# Per-course conversation history
+sessions-*.json

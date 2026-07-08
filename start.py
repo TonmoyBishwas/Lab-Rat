@@ -1,6 +1,18 @@
-"""
-Lab Rat AI - Launcher
-Usage: python start.py
+r"""
+Lab Rat AI - Generic course launcher.
+
+Usage:
+    python start.py                  -> default course (dataviz-python)
+    python start.py dataviz-r        -> any course folder under courses\
+    python start.py --list           -> show available courses
+
+A course is a folder under courses\<id>\ containing:
+    course.json   - display name, disguise title, temperature, max_tokens,
+                    optional "models" list to pin a per-course model order
+    prompt.md     - the system prompt (the actual IP of this project)
+
+Model registry lives in models.json (ctx + extra llama-server flags per model).
+Everything runs offline from this folder: no pip, no admin, no internet.
 """
 import subprocess, sys, os, time, signal, json, threading
 import urllib.request
@@ -10,32 +22,52 @@ from urllib.parse import urlparse
 ROOT     = os.path.dirname(os.path.abspath(__file__))
 SERVER   = os.path.join(ROOT, "llama-cpp", "llama-server.exe")
 MODELS   = os.path.join(ROOT, "models")
+COURSES  = os.path.join(ROOT, "courses")
 UI_FILE  = os.path.join(ROOT, "ui", "index.html")
-SESSIONS = os.path.join(ROOT, "sessions.json")
 AI_PORT  = 11434
 UI_PORT  = 8080
 
-MODELS_PRIORITY = [
-    "gemma-4-E4B-it-Q4_K_M.gguf",
-    "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
-    "Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf",
-    "Qwen3.5-9B-Q4_K_M.gguf",
-    "Qwen3-14B-Q4_K_M.gguf",
-    "Qwen3.5-4B-Q4_K_M.gguf",
-    "Qwen2.5-7B-Instruct-Q4_K_M.gguf",
-    "Qwen2.5-14B-Instruct-Q4_K_M.gguf",
-    "Qwen2.5-7B-Instruct-Q2_K.gguf",
-]
-CTX_FOR = {
-    "gemma-4-E4B-it-Q4_K_M.gguf":             16384,
-    "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf":  16384,
-    "Qwen2.5-Coder-14B-Instruct-Q4_K_M.gguf":  8192,
-    "Qwen3.5-9B-Q4_K_M.gguf":                  8192,
-    "Qwen3-14B-Q4_K_M.gguf":                   6144,
-    "Qwen3.5-4B-Q4_K_M.gguf":                 16384,
-    "Qwen2.5-14B-Instruct-Q4_K_M.gguf":        4096,
-}
+DEFAULT_COURSE = "dataviz-python"
 
+# ── Model registry ────────────────────────────────────────────────────────────
+def load_registry():
+    with open(os.path.join(ROOT, "models.json"), encoding="utf-8") as f:
+        return json.load(f)
+
+_REG = load_registry()
+MODELS_PRIORITY = _REG["priority"]
+# Kept for backward compat (start_powerbi.py uses base.CTX_FOR)
+CTX_FOR = {name: m["ctx"] for name, m in _REG["models"].items()}
+FLAGS_FOR = {name: m.get("flags", []) for name, m in _REG["models"].items()}
+
+def default_threads():
+    """Physical-core estimate: half the logical count, floor 4."""
+    n = os.cpu_count() or 8
+    return max(4, n // 2)
+
+THREADS = default_threads()
+
+# ── Course config ─────────────────────────────────────────────────────────────
+def list_courses():
+    out = []
+    if os.path.isdir(COURSES):
+        for d in sorted(os.listdir(COURSES)):
+            if not d.startswith("_") and os.path.isfile(os.path.join(COURSES, d, "course.json")):
+                out.append(d)
+    return out
+
+def load_course(course_id):
+    cdir = os.path.join(COURSES, course_id)
+    with open(os.path.join(cdir, "course.json"), encoding="utf-8") as f:
+        course = json.load(f)
+    with open(os.path.join(cdir, "prompt.md"), encoding="utf-8") as f:
+        course["sysPrompt"] = f.read().strip()
+    return course
+
+COURSE = None  # set in run(); UIHandler serves it at /api/config
+
+# ── Sessions (per course) ─────────────────────────────────────────────────────
+SESSIONS = os.path.join(ROOT, "sessions.json")  # overridden per course in run()
 sessions_lock = threading.Lock()
 
 def load_sessions():
@@ -118,6 +150,9 @@ class UIHandler(BaseHTTPRequestHandler):
             except Exception as e:
                 self.send_json(500, {"error": str(e)})
 
+        elif p == "/api/config":
+            self.send_json(200, COURSE or {})
+
         elif p == "/api/sessions":
             with sessions_lock:
                 data = load_sessions()
@@ -179,18 +214,61 @@ def kill_port(port):
     except:
         pass
 
-def find_model():
-    for name in MODELS_PRIORITY:
+def find_model(preferred=None):
+    """preferred: optional per-course filename list tried before the global priority."""
+    for name in (preferred or []) + MODELS_PRIORITY:
         path = os.path.join(MODELS, name)
         if os.path.exists(path):
             return name, path
     return None, None
 
+def start_llama_server(model_name, model_path, ctx=None):
+    """Boot llama-server with registry flags for this model. Returns the process."""
+    ctx = ctx or CTX_FOR.get(model_name, 8192)
+    cmd = [SERVER, "--model", model_path, "--threads", str(THREADS),
+           "--ctx-size", str(ctx), "--batch-size", "512", "--ubatch-size", "128",
+           "--cache-type-k", "q8_0", "--cache-type-v", "q8_0",
+           "--port", str(AI_PORT), "--host", "127.0.0.1", "--no-mmap"]
+    cmd += FLAGS_FOR.get(model_name, [])
+    return subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+def wait_healthy(timeout=180):
+    """Poll llama-server /health. Returns seconds waited, or None on timeout."""
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            urllib.request.urlopen(f"http://127.0.0.1:{AI_PORT}/health", timeout=2)
+            return int(time.time() - start)
+        except:
+            print(f"\r  Loading... {int(time.time()-start)}s", end="", flush=True)
+            time.sleep(3)
+    return None
+
 
 def run():
+    global COURSE, SESSIONS
+
+    args = [a for a in sys.argv[1:] if not a.startswith("-")]
+    if "--list" in sys.argv:
+        print("Available courses:")
+        for c in list_courses():
+            print(f"  {c}")
+        return
+
+    course_id = args[0] if args else DEFAULT_COURSE
+    try:
+        COURSE = load_course(course_id)
+    except FileNotFoundError:
+        print(f"  ERROR: course '{course_id}' not found under courses\\")
+        print(f"  Available: {', '.join(list_courses()) or '(none)'}")
+        input("  Press Enter to exit...")
+        sys.exit(1)
+
+    SESSIONS = os.path.join(ROOT, f"sessions-{course_id}.json")
+
     print()
     print("  =====================================================")
-    print("   Lab Rat AI  |  CPU mode")
+    print(f"   Lab Rat AI  |  {COURSE.get('name', course_id)}  |  CPU mode")
     print("  =====================================================")
     print()
 
@@ -199,7 +277,7 @@ def run():
         input("  Press Enter to exit...")
         sys.exit(1)
 
-    model_name, model_path = find_model()
+    model_name, model_path = find_model(COURSE.get("models"))
     if not model_name:
         print("  ERROR: No model found in models\\")
         print("  Run: python download-model.py")
@@ -207,46 +285,28 @@ def run():
         sys.exit(1)
 
     ctx = CTX_FOR.get(model_name, 8192)
+    COURSE["model"] = model_name
     kill_port(AI_PORT)
     kill_port(UI_PORT)
 
+    print(f"  Course:  {course_id}")
     print(f"  Model:   {model_name}")
-    print(f"  Context: {ctx} tokens  |  Threads: 8")
+    print(f"  Context: {ctx} tokens  |  Threads: {THREADS}")
     print()
     print("  Starting AI server... (first load: 30-90 seconds)")
     print()
 
-    procs = []
+    procs = [start_llama_server(model_name, model_path, ctx)]
 
-    # ── Start llama-server ──────────────────────────────────────────────────────
-    ai_proc = subprocess.Popen(
-        [SERVER, "--model", model_path, "--threads", "8",
-         "--ctx-size", str(ctx), "--batch-size", "512", "--ubatch-size", "128",
-         "--cache-type-k", "q8_0", "--cache-type-v", "q8_0",
-         "--port", str(AI_PORT), "--host", "127.0.0.1", "--no-mmap"],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-    )
-    procs.append(ai_proc)
-
-    # ── Poll health ─────────────────────────────────────────────────────────────
-    start = time.time()
-    deadline = start + 180
-    while time.time() < deadline:
-        try:
-            urllib.request.urlopen(f"http://127.0.0.1:{AI_PORT}/health", timeout=2)
-            break
-        except:
-            print(f"\r  Loading... {int(time.time()-start)}s", end="", flush=True)
-            time.sleep(3)
-    else:
+    waited = wait_healthy()
+    if waited is None:
         print("\n\n  Timeout: AI server did not start.")
         for p in procs: p.terminate()
         input("  Press Enter to exit...")
         sys.exit(1)
 
-    print(f"\r  AI server ready! ({int(time.time()-start)}s)          ")
+    print(f"\r  AI server ready! ({waited}s)          ")
 
-    # ── Start UI HTTP server ────────────────────────────────────────────────────
     ui_server = ThreadingHTTPServer(("127.0.0.1", UI_PORT), UIHandler)
     ui_thread = threading.Thread(target=ui_server.serve_forever, daemon=True)
     ui_thread.start()
