@@ -17,9 +17,15 @@ MODELS = [
         "launcher": "python start.py",
     },
     {
-        "name": "Mellum 2 12B-A2.5B Instruct Q4_K_M (~8.1 GB)  CODE CANDIDATE  |  May 2026 JetBrains MoE, 2.5B active = fast on CPU, LiveCodeBench 69.9. Run evals before trusting it.",
-        "filename": "Mellum2-12B-A2.5B-Instruct-Q4_K_M.gguf",
-        "url": "https://huggingface.co/JetBrains/Mellum2-12B-A2.5B-Instruct-GGUF-Q4_K_M/resolve/main/Mellum2-12B-A2.5B-Instruct-Q4_K_M.gguf",
+        "name": "Mellum 2 12B-A2.5B Instruct MXFP4_MOE (~7.0 GB)  FASTEST  |  Jun 2026 JetBrains MoE, 2.5B active. Measured 20.4 tok/s vs Gemma's 11.3. NEEDS llama.cpp >= b9482. Weak instruction-following - follows exam decoys. See courses/da-python/evals/findings.md.",
+        "filename": "Mellum2-12B-A2.5B-Instruct-MXFP4_MOE.gguf",
+        "url": "https://huggingface.co/JetBrains/Mellum2-12B-A2.5B-Instruct-GGUF-MXFP4_MOE/resolve/main/Mellum2-12B-A2.5B-Instruct-MXFP4_MOE.gguf",
+        "launcher": "python start.py",
+    },
+    {
+        "name": "Granite 4.1 8B Q4_K_M (~5.4 GB)  NOT RECOMMENDED  |  IBM Apr 2026, best published HumanEval of anything that fits, but measured only 4.9 tok/s warm on a fast desktop - too slow for the exam laptop. Also failed the ordinal-encoding decoy.",
+        "filename": "granite-4.1-8b-Q4_K_M.gguf",
+        "url": "https://huggingface.co/unsloth/granite-4.1-8b-GGUF/resolve/main/granite-4.1-8b-Q4_K_M.gguf",
         "launcher": "python start.py",
     },
     {

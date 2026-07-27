@@ -2,6 +2,8 @@
   "_comment": "Model registry. 'priority' is the global fallback order used when a course does not pin its own list in course.json 'models'. Each entry: ctx = context window to request (RAM-bound, not the model's max), flags = extra llama-server flags. All models must be Q4_K_M-class quants that fit 16 GB RAM CPU-only.",
   "priority": [
     "gemma-4-E4B-it-Q4_K_M.gguf",
+    "Mellum2-12B-A2.5B-Instruct-MXFP4_MOE.gguf",
+    "granite-4.1-8b-Q4_K_M.gguf",
     "Mellum2-12B-A2.5B-Instruct-Q4_K_M.gguf",
     "Qwen3.5-9B-Q4_K_M.gguf",
     "Qwen2.5-Coder-7B-Instruct-Q4_K_M.gguf",
@@ -11,7 +13,17 @@
     "gemma-4-E4B-it-Q4_K_M.gguf": {
       "ctx": 16384,
       "flags": [],
-      "notes": "Apr 2026, dense, thinking off by default. Validated 25/25 on DV Lab eval banks (June 2026). Current safe default."
+      "notes": "Apr 2026, dense, thinking off by default. Validated 25/25 on DV Lab eval banks (June 2026). CONFIRMED PRIMARY for da-python after a 3-way bake-off (July 2026): beat Mellum2 and Granite on the identical decoy set (2 PASS + 1 PARTIAL vs Mellum2's 1 PARTIAL + 2 FAIL) and on execution (19/20 vs 18/20 code blocks running). Slower (measured 10 tok/s warm, ~130 s and ~1300 tokens per answer) but it is the only candidate that reliably REFUSES a question worded to bait a wrong technique - the decisive property for an exam appliance. Remaining weakness: fabricates numbers/directions in prose, which the NOTES DISCIPLINE section of the prompt exists to suppress."
+    },
+    "Mellum2-12B-A2.5B-Instruct-MXFP4_MOE.gguf": {
+      "ctx": 16384,
+      "flags": [],
+      "notes": "JetBrains, Jun 2026. MoE 12B total / 2.5B active - FASTEST option, measured 20.4 tok/s vs Gemma's 11.3 (llama-bench, dev box), ~40 s per answer. MXFP4_MOE quant, 7.03 GB. NO thinking mode. Apache 2.0. REQUIRES llama.cpp >= b9482 (PR #23966); b8914 fails with 'unknown model architecture'. LOST the da-python bake-off (July 2026): weak instruction-following (published IFEval 75.8 vs Gemma 96.7) shows up as stating a rule in Assumptions then violating it in code - on the leakage decoy it wrote 'must fit on train only' then called fit_transform on the full frame. Also omitted an import (Q19) and fabricated statistics. KEEP as the speed fallback if a future exam is time-critical, but it needs its own prompt-tuning round first."
+    },
+    "granite-4.1-8b-Q4_K_M.gguf": {
+      "ctx": 16384,
+      "flags": [],
+      "notes": "IBM, Apr 2026. Dense 8B, 5.35 GB. Highest published HumanEval 87.2 / MBPP 82.5 / EvalPlus 80.2 of anything that fits 16 GB. NO thinking mode by design - IBM omits reasoning traces deliberately for predictable latency. Weaker general knowledge (MMLU-Pro 56.0 vs Gemma 69.4). Dense => slowest of the three candidates. Apache 2.0. Run with --jinja."
     },
     "Mellum2-12B-A2.5B-Instruct-Q4_K_M.gguf": {
       "ctx": 16384,

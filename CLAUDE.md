@@ -34,8 +34,14 @@ ui/index.html            single generic chat UI; fetches /api/config at load
 ui/powerbi.html          special-mode UI (live .pbix schema, {MODEL_CONTEXT})
 start_powerbi.py         special launcher for the Power BI bridge
 eval/run_eval.py         runs a bank against the local model, logs answers
+eval/check_answers.py    EXECUTES every ```python block in a run log and
+                         reports which ones actually run (stdlib-only runner;
+                         the answers themselves need pandas etc. on the dev box)
 eval/BLINDSPOT_WORKFLOW.md   THE tuning loop — read before touching a prompt
 launch-<course>.bat      double-click entry points
+data/                    vendored seaborn CSVs — sns.load_dataset() needs the
+                         network on first call, so the exam PC must either
+                         pre-warm its cache or read these. See SETUP_FOR_EXAM.md
 evaluations/             historical (pre-redesign) eval logs, kept as record
 ```
 
@@ -67,19 +73,37 @@ months of eval rounds:
 
 ## Models (July 2026 state)
 
-- `gemma-4-E4B-it-Q4_K_M` — incumbent, eval-validated 25/25 (June 2026).
-- `Mellum2-12B-A2.5B-Instruct-Q4_K_M` — challenger: JetBrains MoE, 2.5B
-  active (fast on CPU), LiveCodeBench 69.9 vs Gemma's ~52, no
-  chain-of-thought. **Not yet eval-validated** — compare with
-  `python eval\run_eval.py <course> --model ...` before promoting.
+- `gemma-4-E4B-it-Q4_K_M` — **primary**. Eval-validated 25/25 on DV Lab
+  (June 2026) and re-confirmed by a 3-way bake-off on `da-python` (July 2026).
+- `Mellum2-12B-A2.5B-Instruct-MXFP4_MOE` — fastest (20.4 vs 11.3 tok/s) but
+  **lost the bake-off**: weak instruction-following (IFEval 75.8 vs Gemma's
+  96.7) makes it follow decoy questions and state a rule then violate it.
+  Keep as a speed fallback; it would need its own tuning round.
+- `granite-4.1-8b-Q4_K_M` — best published HumanEval that fits, but measured
+  only 7.4 tok/s (4.9 warm through llama-server) and failed the ordinal
+  decoy. Not competitive on this hardware.
+- **Lesson from the bake-off:** for this appliance, *instruction-following*
+  beats *code benchmarks*. The job is not "write hard algorithms", it is
+  "follow a strict format and refuse a badly-worded question". Rank
+  candidates on IFEval-like behaviour first, HumanEval second.
 - `Qwen3.5-9B-Q4_K_M` — strongest reasoning per GB; thinking must be killed
   with `--reasoning-budget 0` (already in `models.json` flags; needs
   llama.cpp ≥ b8148). Dense 9B → slow; niche use only.
 - Promotion rule: a challenger must pass every bank the incumbent passes,
   then flip `models.json` priority. A model swap invalidates ALL prompt
   calibration — plan a full re-eval, not a spot check.
-- llama.cpp: repo is `ggml-org/llama.cpp`, current local build b8914.
-  `--flash-attn` takes a value in new builds. Update via `update-llama-cpp.bat`.
+- llama.cpp: repo is `ggml-org/llama.cpp`, current local build **b10148**
+  (upgraded from b8914 July 2026; the b8914 tree is kept at
+  `old/llama-cpp-b8914` for rollback). Mellum2 needs ≥ b9482 or it fails with
+  `unknown model architecture`. `--flash-attn` takes a value in new builds.
+  Update via `update-llama-cpp.bat`.
+- Measured decode on the DEV box (Ryzen 9 7950X, `llama-bench -p 512 -n 128`),
+  16 / 6 threads — the exam i7 will be slower, but the RANKING holds because
+  decode is memory-bandwidth-bound:
+  Mellum2 MXFP4 20.4 / 22.1 · Gemma 4 E4B 11.3 / 11.9 · Granite 4.1 8B 7.4 / 7.6.
+  Note decode barely moves with thread count while prefill halves — so a big
+  system prompt costs wall-clock on the FIRST question of a session only
+  (llama-server reuses the cached prefix afterwards).
 
 ## Conventions
 

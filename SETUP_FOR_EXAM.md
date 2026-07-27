@@ -162,6 +162,72 @@ You do not install these. Just type the name (`iris`, `mtcars`,
 
 ---
 
+## Python — for Data Analytics Lab questions (`launch-da.bat`)
+
+### One-line install
+
+```powershell
+pip install numpy pandas matplotlib seaborn scikit-learn
+```
+
+That is the entire surface the Data Analytics Lab uses. `scikit-learn` is the
+pip name; you import it as `sklearn`. The course only needs `MinMaxScaler`,
+`StandardScaler` and `train_test_split` from it.
+
+### CRITICAL — pre-warm the seaborn dataset cache
+
+Every DA Lab question starts with `sns.load_dataset('titanic')` or
+`sns.load_dataset('diamonds')`. **`load_dataset` downloads from GitHub the
+first time it is called** and caches the CSV locally. With the exam-hall
+internet off, an un-warmed machine raises `URLError` and you cannot even load
+the data.
+
+Run this ONCE, at home, on the exam laptop, while you still have internet:
+
+```powershell
+python -c "import seaborn as sns; [sns.load_dataset(n) for n in ['titanic','diamonds','tips','iris','penguins','mpg','flights']]; print('cache warmed')"
+```
+
+The CSVs land in `%LOCALAPPDATA%\seaborn\seaborn\Cache` and stay there. After
+that, `sns.load_dataset` works with the network unplugged.
+
+**Belt and braces:** this repo also ships the same CSVs in `data\`. Copy them
+next to your notebook on exam day, and the fallback the AI writes into every
+answer will pick them up automatically:
+
+```python
+try:
+    df = sns.load_dataset('titanic')
+except Exception:
+    df = pd.read_csv('titanic.csv')
+```
+
+### Exam-day tip: warm it up BEFORE the clock starts
+
+The Data Analytics system prompt is large (~8.5k tokens). llama-server must
+process it once, which costs roughly a minute on a lab PC — but it then caches
+that prefix, so every later question skips it. Observed: 98 s for the first
+question on a cold server, 31 s and 45 s for the next two.
+
+So on exam day: launch `launch-da.bat` as soon as you sit down, and ask it
+something trivial ("hi") while the paper is still being handed out. Every real
+question after that is fast. Do not launch it for the first time on question 1.
+
+### Verify
+
+```python
+import numpy, pandas, matplotlib, seaborn, sklearn
+import seaborn as sns
+print(sns.load_dataset('titanic').shape)    # (891, 15)
+print(sns.load_dataset('diamonds').shape)   # (53940, 10)
+print("all good")
+```
+
+Then pull the network cable / turn off Wi-Fi and run it again. If it still
+prints both shapes, you are genuinely offline-ready.
+
+---
+
 ## Final checklist before exam day
 
 Print this out. Tick each.
@@ -170,6 +236,11 @@ Print this out. Tick each.
 - [ ] `import numpy, pandas, matplotlib, seaborn, scipy, skimage, joypy, palettable, colorsys` in a Jupyter cell shows no error.
 - [ ] `install.packages(c("tidyverse", "lubridate"))` runs in RStudio without errors.
 - [ ] `library(ggplot2); library(dplyr); library(tidyr); library(readr); library(lubridate)` in RStudio shows no error.
+- [ ] `pip install numpy pandas matplotlib seaborn scikit-learn` runs without errors (Data Analytics Lab).
+- [ ] Seaborn cache pre-warmed: the one-liner above printed `cache warmed`.
+- [ ] **Wi-Fi OFF**, then `sns.load_dataset('titanic')` and `sns.load_dataset('diamonds')` still return their shapes. This is the one that bites on exam day.
+- [ ] Copied `data\*.csv` next to the notebook you will work in.
+- [ ] `launch-da.bat` (= `python start.py da-python`) launches the Data Analytics mode and opens `localhost:8080`.
 - [ ] `launch-python.bat` (= `python start.py dataviz-python`) launches the Python mode and opens `localhost:8080` in the browser.
 - [ ] `launch-r.bat` (= `python start.py dataviz-r`) launches the R mode and opens `localhost:8080` in the browser.
 - [ ] After launching, hard-refreshed the browser (Ctrl+F5) so the latest

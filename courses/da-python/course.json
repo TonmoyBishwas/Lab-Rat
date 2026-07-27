@@ -1,0 +1,9 @@
+{
+  "id": "da-python",
+  "name": "Data Analytics Lab - Python",
+  "title": "JupyterLab",
+  "tagline": "Offline Python data analytics assistant.",
+  "temperature": 0.3,
+  "max_tokens": 4096,
+  "models": []
+}
