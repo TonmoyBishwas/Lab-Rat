@@ -41,7 +41,25 @@ CTX_FOR = {name: m["ctx"] for name, m in _REG["models"].items()}
 FLAGS_FOR = {name: m.get("flags", []) for name, m in _REG["models"].items()}
 
 def default_threads():
-    """Physical-core estimate: half the logical count, floor 4."""
+    """Physical-core estimate: half the logical count, floor 4.
+
+    Override with the LABRAT_THREADS env var. This matters on Intel 12th-gen
+    and later, which are HYBRID: P-cores have hyper-threading, E-cores do not,
+    so "logical // 2" is only an approximation of the physical core count.
+    llama.cpp runs a barrier per layer, so every thread waits on the slowest
+    one - putting threads on E-cores can cost more than it adds.
+
+    Measured on the dev box (llama-bench, gemma-4-E4B): decode is
+    memory-bandwidth-bound and barely moves with thread count (11.3 tok/s at 16
+    threads vs 11.9 at 6), while prefill is compute-bound and nearly halves
+    (252 -> 138 tok/s). So if a lab PC feels slow, try setting this to the
+    number of P-cores and compare - a LOWER number is often faster.
+
+        set LABRAT_THREADS=6     (cmd, before running launch-da.bat)
+    """
+    env = os.environ.get("LABRAT_THREADS", "").strip()
+    if env.isdigit() and int(env) > 0:
+        return int(env)
     n = os.cpu_count() or 8
     return max(4, n // 2)
 
@@ -256,6 +274,13 @@ def run():
         return
 
     course_id = args[0] if args else DEFAULT_COURSE
+    # A stripped deployment (e.g. the USB copy, which ships only da-python) may
+    # not contain DEFAULT_COURSE. If the default is absent but exactly one
+    # course is installed, use it rather than erroring on a bare "start.py".
+    if not args and not os.path.isdir(os.path.join(COURSES, course_id)):
+        installed = list_courses()
+        if len(installed) == 1:
+            course_id = installed[0]
     try:
         COURSE = load_course(course_id)
     except FileNotFoundError:
