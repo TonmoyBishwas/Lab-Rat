@@ -165,6 +165,15 @@ the internet off it raises URLError / "unable to connect". If the question says
 Use this two-line pattern whenever you call sns.load_dataset. If the question
 supplies its own CSV path, just use pd.read_csv(path) and skip the fallback.
 
+WHENEVER YOU WRITE pd.read_csv(...), THE VERY NEXT LINE IS THIS ONE:
+      df = df.drop(columns=[c for c in ['Unnamed: 0', 'index'] if c in df.columns])
+No exceptions, and no need to check the file first. A CSV saved with its index
+carries a row-number column called 'Unnamed: 0' (older exports call it
+'index'). It is not a feature. Left in, it silently becomes an extra predictor
+in X and an extra row and column in every correlation matrix and heatmap. The
+line above is a no-op when the column is absent, so it is always safe to write
+and always wrong to omit. It costs one line and removes a whole class of error.
+
 === DATASET FACTS (get the column names right — never invent them) ===
 
 titanic — sns.load_dataset('titanic') returns 891 rows x 15 columns:
@@ -479,8 +488,9 @@ Univariate categorical — count plot:
   0.14. The "add hue=x and legend=False" workaround is easy to half-apply — the
   hue gets forgotten and the warning comes back — so the reliable rule is
   simply: omit palette. Only if the question NAMES a palette do you write it,
-  and then you must include BOTH extra arguments:
-      sns.countplot(data=df, x='cut', hue='cut', palette='Blues', legend=False)
+  and then you must include BOTH extra arguments — hue set to the same column
+  as x, and legend=False. If you cannot write all three together, write none of
+  them: a plot with default colours scores full marks, a FutureWarning does not.
 
   This rule is about palette= on CATEGORICAL plots only. sns.heatmap takes
   cmap=, which is a different argument and is completely unaffected —
@@ -513,7 +523,7 @@ Binning a continuous column:
 
 Two categories against a target — crosstab:
       print(pd.crosstab(df['sex'], df['pclass'], values=df['survived'], aggfunc='mean').round(3))
-      sns.barplot(data=df, x='pclass', y='survived', hue='sex', palette=['#e74c3c','#3498db'])
+      sns.barplot(data=df, x='pclass', y='survived', hue='sex')
   When you pass values=, you MUST also pass aggfunc= or pandas raises
       ValueError: values cannot be used without an aggfunc.
   Plain frequency counts need neither: pd.crosstab(df['sex'], df['pclass']).
@@ -573,8 +583,10 @@ question walks from loading through split to EDA.
       df = pd.read_csv('diamonds.csv')       # if the paper gives a load block,
                                              # reproduce it verbatim. Do NOT
                                              # substitute sns.load_dataset.
-      if 'Unnamed: 0' in df.columns:         # CSV exports often carry the old
-          df = df.drop(columns=['Unnamed: 0'])   # index; it is not a feature
+      # ALWAYS include this line after read_csv. A CSV saved with its index
+      # carries a row-number column called 'Unnamed: 0' (or 'index'). It is
+      # not a feature; left in, it becomes a meaningless 16th predictor.
+      df = df.drop(columns=[c for c in ['Unnamed: 0', 'index'] if c in df.columns])
 
       # ---- clean ---------------------------------------------------------
       df[['x','y','z']] = df[['x','y','z']].replace(0, np.nan)
@@ -616,7 +628,7 @@ THE FIVE PLACES MARKS GO MISSING IN THIS SHAPE — check each before you answer:
      travels into X, and so the named continuous features still exist?
   3. After the split, are you reading the target from y_train, not X_train?
   4. Does the "top correlated feature" line .drop() the target before idxmax()?
-  5. Does every seaborn categorical plot pass hue= alongside palette=?
+  5. Have you left palette= OFF every countplot / boxplot / barplot?
 
 Encoding categorical plots in this shape: once cut has been mapped to integers
 it is numeric, so a count plot of the ORIGINAL categories must either run
@@ -671,6 +683,7 @@ For an UNFAMILIAR dataset or a supplied CSV:
 - Keep one logical step per block of code, in the order the question asks.
 
 === ANTI-PATTERNS (never do these) ===
+- Never leave an index column in X. A CSV exported with its index carries a column literally named 'Unnamed: 0' (sometimes 'index'). It is a row number, not a feature. Immediately after read_csv, write: df = df.drop(columns=[c for c in ['Unnamed: 0','index'] if c in df.columns])
 - Never let the TARGET column appear inside X. Build X with df.drop(columns=[target]) — never a hand-written feature_cols list or a "[c for c in df.columns if c not in [...]]" comprehension. A leaked target makes "which feature correlates most with price" answer "price" at r=1.000.
 - Never call .idxmax() on a target's correlation series without .drop(target) first — the target correlates 1.000 with itself and wins every time.
 - Never write X_train['price'] (or X_train[target]). After a correct split the target is only in y_train. Plot y_train directly; recombine with X_train.assign(price=y_train) when a correlation matrix must include it.

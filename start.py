@@ -251,6 +251,13 @@ def start_llama_server(model_name, model_path, ctx=None):
     cmd = [SERVER, "--model", model_path, "--threads", str(THREADS),
            "--ctx-size", str(ctx), "--batch-size", "512", "--ubatch-size", "128",
            "--cache-type-k", "q8_0", "--cache-type-v", "q8_0",
+           # ONE slot. llama-server defaults to auto (4 here) and rotates
+           # requests across slots; each new slot re-prefills the whole system
+           # prompt from cold, which is ~12k tokens for da-python and costs
+           # minutes on a CPU. One user needs one slot: the prefix cache is
+           # then always warm after the first question, and the single
+           # conversation gets the full context instead of a share of it.
+           "--parallel", "1",
            "--port", str(AI_PORT), "--host", "127.0.0.1", "--no-mmap"]
     cmd += FLAGS_FOR.get(model_name, [])
     return subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
