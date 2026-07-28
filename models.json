@@ -11,7 +11,7 @@
   ],
   "models": {
     "gemma-4-E4B-it-Q4_K_M.gguf": {
-      "ctx": 16384,
+      "ctx": 32768,
       "flags": [],
       "notes": "Apr 2026, dense, thinking off by default. Validated 25/25 on DV Lab eval banks (June 2026). CONFIRMED PRIMARY for da-python after a 3-way bake-off (July 2026): beat Mellum2 and Granite on the identical decoy set (2 PASS + 1 PARTIAL vs Mellum2's 1 PARTIAL + 2 FAIL) and on execution (19/20 vs 18/20 code blocks running). Slower (measured 10 tok/s warm, ~130 s and ~1300 tokens per answer) but it is the only candidate that reliably REFUSES a question worded to bait a wrong technique - the decisive property for an exam appliance. Remaining weakness: fabricates numbers/directions in prose, which the NOTES DISCIPLINE section of the prompt exists to suppress."
     },

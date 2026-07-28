@@ -308,12 +308,25 @@ Invalid values that are not literally NaN (assignment Task 1):
   A diamond cannot be 0 mm. Convert to NaN FIRST, then impute — never leave
   the zeros in, and never drop the rows.
 
+ENCODE IN PLACE — overwrite the column, do not add a parallel one.
+  When the question says "CONVERT cut and clarity into numeric format", it
+  means the column itself becomes numeric:
+      df['cut'] = df['cut'].map(cut_map)                # RIGHT
+      df['cut_encoded'] = df['cut'].map(cut_map)        # WRONG for that wording
+  Writing to a new '<col>_encoded' name leaves the original TEXT column sitting
+  in the frame. It then travels into X, so X is not numeric, and you are forced
+  into a hand-written exclusion list to remove it — which is exactly how the
+  target goes missing or the one-hot columns get dropped. Overwriting keeps
+  X = df.drop(columns=[target]) correct with no bookkeeping at all.
+  Only use a new column name if the question explicitly asks to KEEP both (for
+  example "create a new column age_group") or asks you to compare before/after.
+
 Encoding — three cases, pick by the number and the meaning of the categories:
   (a) Binary -> map to 0/1:
-        df['sex_encoded'] = df['sex'].map({'male': 0, 'female': 1})
+        df['sex'] = df['sex'].map({'male': 0, 'female': 1})
   (b) ORDINAL (categories have a real order: quality, size, grade) -> explicit map:
         cut_map = {'Fair':0,'Good':1,'Very Good':2,'Premium':3,'Ideal':4}
-        df['cut_encoded'] = df['cut'].map(cut_map)
+        df['cut'] = df['cut'].map(cut_map)
       NEVER use df['cut'].cat.codes AND NEVER use LabelEncoder here — not even
       when the question explicitly tells you to. seaborn stores diamonds' cut as
       ['Ideal','Premium','Very Good','Good','Fair'], so cat.codes gives
@@ -352,23 +365,49 @@ Outliers — IQR detect, then CAP (never delete):
       lower, upper = Q1 - 1.5*IQR, Q3 + 1.5*IQR
       mask = (df['fare'] < lower) | (df['fare'] > upper)
       print(f"Bounds: {lower:.4f} to {upper:.4f}  |  Outliers: {mask.sum()}")
-      df['fare_capped'] = df['fare'].clip(lower=lower, upper=upper)
+      df['fare'] = df['fare'].clip(lower=lower, upper=upper)     # cap IN PLACE
   The course convention is CAPPING (winsorizing) with .clip(), so no rows are
   lost. Only drop rows if the question literally says "remove"/"delete" — and
   then say in Notes that capping was the alternative.
-  Before/after box plots:
+
+  CAP IN PLACE unless you need the before/after plot. "Cap any outliers in
+  table to these boundary values" means the table column itself gets capped. If
+  you invent df['table_capped'] instead, the frame now holds BOTH columns, so
+  X carries a duplicate, and a later instruction that names the continuous
+  features as (carat, depth, table, x, y, z) no longer matches your frame —
+  you scale the wrong column or raise KeyError.
+  ONLY when the question asks for before/after box plots do you need a copy,
+  and then keep the ORIGINAL aside rather than the capped one:
+      before = df['fare'].copy()                       # keep for the plot only
+      df['fare'] = df['fare'].clip(lower=lower, upper=upper)
       fig, ax = plt.subplots(1, 2, figsize=(10, 4))
-      ax[0].boxplot(df['fare']);        ax[0].set_title('Before capping')
-      ax[1].boxplot(df['fare_capped']); ax[1].set_title('After capping')
+      ax[0].boxplot(before);        ax[0].set_title('Before capping')
+      ax[1].boxplot(df['fare']);    ax[1].set_title('After capping')
       plt.tight_layout(); plt.show()
+  Always PRINT Q1, Q3 and the IQR separately, not just the two bounds — the
+  question awards marks for computing them:
+      print(f"Q1={Q1}  Q3={Q3}  IQR={IQR}  Lower={lower}  Upper={upper}")
+      print("Outliers found:", ((s < lower) | (s > upper)).sum())
 
 Train/test split:
-      feature_cols = ['pclass','sex_encoded','age','sibsp','parch','fare','emb_C','emb_Q','emb_S']
-      X = df[feature_cols]
       y = df['survived']
+      X = df.drop(columns=['survived'])          # target OUT, everything else IN
       X_train, X_test, y_train, y_test = train_test_split(
           X, y, test_size=0.2, random_state=42, stratify=y)
       print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+  BUILD X WITH .drop(columns=[target]). Do NOT hand-write a feature_cols list
+  and do NOT use a "[c for c in df.columns if c not in [...]]" comprehension.
+  Those are how the target ends up inside X: the list gets one name wrong and
+  nothing raises an error, so the mistake is invisible until it silently
+  destroys the answer. When the question says "price as target and ALL OTHER
+  columns as predictors", .drop(columns=['price']) IS that sentence in code.
+  THE TARGET MUST NEVER APPEAR IN X. If it does, every downstream answer is
+  wrong: the correlation of the target with itself is 1.000, so "which feature
+  correlates most with price" comes back "price", and any model would score
+  perfectly by reading the answer off its own input.
+  Before splitting, drop any leftover text columns you have replaced with
+  encoded ones, so X is fully numeric:
+      df = df.drop(columns=['name'])             # identifiers, high-cardinality text
   random_state=42 always (reproducibility). stratify=y ONLY for a CLASSIFICATION
   target — it keeps the class ratio identical in both splits. NEVER pass
   stratify on a continuous target like diamonds' price; it raises
@@ -406,11 +445,46 @@ Univariate numeric — histogram and box plot:
   price, carat all are). mean < median -> left-skewed. mean == median -> symmetric.
   Always state the direction in words when the question says "describe the shape".
 
+  "HISTOGRAM OF <target> IN THE TRAINING SET" — after a split, the target lives
+  in y_train, NOT in X_train. Plot the Series directly:
+      plt.hist(y_train, bins=30, color='#27ae60', edgecolor='white')
+  X_train['price'] raises KeyError, because a correctly built X excludes the
+  target. If that line runs, X was built wrongly.
+  Log transform of a right-skewed target, plotted beside the original:
+      log_price = np.log1p(y_train)              # ln(1 + price)
+      fig, ax = plt.subplots(1, 2, figsize=(12, 4))
+      ax[0].hist(y_train,   bins=30, color='#27ae60', edgecolor='white')
+      ax[0].set_title('price (original)')
+      ax[1].hist(log_price, bins=30, color='#2E86C1', edgecolor='white')
+      ax[1].set_title('log_price = ln(1 + price)')
+      plt.tight_layout(); plt.show()
+  np.log1p, never np.log — price can be 0 in principle and log(0) is -inf.
+  What to say about the change: the original is strongly right-skewed (a long
+  tail of expensive stones); the log transform pulls that tail in and leaves a
+  far more symmetric, near-normal shape. That is the point of the transform —
+  it is a real, expected effect, so you may state it without printing it.
+
 Univariate categorical — count plot:
-      sns.countplot(data=df, x='pclass', hue='pclass', palette='Blues', legend=False)
-  Passing palette= WITHOUT hue= is deprecated in seaborn 0.13 and removed in
-  0.14. Always set hue to the SAME column as x and add legend=False. The same
-  applies to sns.boxplot and sns.barplot.
+      sns.countplot(data=df, x='pclass')                  # NO palette=
+      sns.boxplot(data=df, x='cut', y='price')            # NO palette=
+      sns.barplot(data=df, x='cut', y='price')            # NO palette=
+
+  DO NOT PASS palette= TO countplot / boxplot / barplot. Leave it out entirely.
+  Seaborn's default colours are fine and no mark has ever been awarded for a
+  palette name. Passing palette= without hue= raises
+
+      FutureWarning: Passing `palette` without assigning `hue` is deprecated
+
+  which prints a red block under the cell and will break outright in seaborn
+  0.14. The "add hue=x and legend=False" workaround is easy to half-apply — the
+  hue gets forgotten and the warning comes back — so the reliable rule is
+  simply: omit palette. Only if the question NAMES a palette do you write it,
+  and then you must include BOTH extra arguments:
+      sns.countplot(data=df, x='cut', hue='cut', palette='Blues', legend=False)
+
+  This rule is about palette= on CATEGORICAL plots only. sns.heatmap takes
+  cmap=, which is a different argument and is completely unaffected —
+  cmap='coolwarm' on a heatmap is correct and expected.
 
 Average price by cut (assignment Task 7 — the single most misreported result):
       avg = df.groupby('cut', observed=True)['price'].mean().sort_values(ascending=False)
@@ -459,6 +533,27 @@ Correlation and heatmap:
   Correlation measures LINEAR association only — a strong curve can still show
   a middling r. Say so when the question asks you to interpret one.
 
+  "CORRELATION FOR THE COLUMNS IN X_train ALONG WITH price" — the target is not
+  in X_train, so you must put it back for this one calculation. Use .assign(),
+  which returns a copy and leaves X_train untouched:
+      train_corr = X_train.assign(price=y_train).corr(numeric_only=True)
+      plt.figure(figsize=(10, 8))
+      sns.heatmap(train_corr, annot=True, fmt='.2f', cmap='coolwarm',
+                  center=0, square=True)
+      plt.title('Correlation matrix'); plt.tight_layout(); plt.show()
+  Do NOT reach for X_train['price'] — it does not exist and raises KeyError. If
+  it DOES exist, you built X wrongly; go back and use df.drop(columns=['price']).
+
+  THEN, TO NAME THE TOP FEATURE, DROP THE TARGET FIRST:
+      target_corr = train_corr['price'].drop('price')      # <- the .drop matters
+      print("Highest correlation with price:",
+            target_corr.idxmax(), round(target_corr.max(), 4))
+  Without .drop('price') the series still contains price's correlation with
+  itself, which is 1.000 and beats everything, so idxmax() answers "price" —
+  a guaranteed lost mark on a question whose real answer is carat (0.922).
+  Use .abs().idxmax() instead when the question says "strongest" or "highest
+  correlation" without specifying a direction, so a large negative still wins.
+
 Fixing right-skew with a log transform:
       df['log_price'] = np.log1p(df['price'])
       fig, ax = plt.subplots(1, 2, figsize=(12, 4))
@@ -466,6 +561,68 @@ Fixing right-skew with a log transform:
       ax[1].hist(df['log_price'], bins=30); ax[1].set_title('log1p(price) (more symmetric)')
       plt.tight_layout(); plt.show()
   Use np.log1p, not np.log — log(0) is -inf and prices/counts can be 0.
+
+=== RECIPES — PART 3: THE FULL CLASS-TEST PIPELINE (preprocess -> split -> EDA) ===
+
+A class test asks the whole pipeline as numbered tasks in one paper. The
+individual steps are above; what follows is the ORDER and the PLUMBING between
+them, which is where marks are actually lost. Follow this skeleton whenever a
+question walks from loading through split to EDA.
+
+      # ---- load exactly as the paper says -------------------------------
+      df = pd.read_csv('diamonds.csv')       # if the paper gives a load block,
+                                             # reproduce it verbatim. Do NOT
+                                             # substitute sns.load_dataset.
+      if 'Unnamed: 0' in df.columns:         # CSV exports often carry the old
+          df = df.drop(columns=['Unnamed: 0'])   # index; it is not a feature
+
+      # ---- clean ---------------------------------------------------------
+      df[['x','y','z']] = df[['x','y','z']].replace(0, np.nan)
+      for c in ['x','y','z']:
+          df[c] = df.groupby('cut', observed=True)[c].transform(
+              lambda s: s.fillna(s.median()))
+      df['carat'] = df['carat'].fillna(df['carat'].median())
+      df['price'] = df['price'].fillna(df['price'].median())
+
+      # ---- encode IN PLACE, so X stays fully numeric ----------------------
+      df['cut']     = df['cut'].map(cut_map)
+      df['clarity'] = df['clarity'].map(clarity_map)
+      df = pd.get_dummies(df, columns=['color'], prefix='color', dtype=int)
+
+      # ---- cap outliers IN PLACE -----------------------------------------
+      df['table'] = df['table'].clip(lower=lower, upper=upper)
+
+      # ---- split: target OUT of X ----------------------------------------
+      y = df['price']
+      X = df.drop(columns=['price'])
+      X_train, X_test, y_train, y_test = train_test_split(
+          X, y, test_size=0.2, random_state=42)
+
+      # ---- scale: fit on train only --------------------------------------
+      num_cols = ['carat','depth','table','x','y','z']
+      scaler = StandardScaler()
+      X_train[num_cols] = scaler.fit_transform(X_train[num_cols])
+      X_test[num_cols]  = scaler.transform(X_test[num_cols])
+
+      # ---- EDA: the target now lives in y_train ---------------------------
+      plt.hist(y_train, bins=30)                       # NOT X_train['price']
+      train_corr = X_train.assign(price=y_train).corr(numeric_only=True)
+      top = train_corr['price'].drop('price')          # drop self-correlation
+      print("Highest correlation with price:", top.idxmax(), round(top.max(), 4))
+
+THE FIVE PLACES MARKS GO MISSING IN THIS SHAPE — check each before you answer:
+  1. Is the target excluded from X? Use .drop(columns=[target]), never a list.
+  2. Did you encode and cap IN PLACE, so no stale text or duplicate column
+     travels into X, and so the named continuous features still exist?
+  3. After the split, are you reading the target from y_train, not X_train?
+  4. Does the "top correlated feature" line .drop() the target before idxmax()?
+  5. Does every seaborn categorical plot pass hue= alongside palette=?
+
+Encoding categorical plots in this shape: once cut has been mapped to integers
+it is numeric, so a count plot of the ORIGINAL categories must either run
+BEFORE the mapping, or map the codes back for the axis labels. If the question
+asks for "a count plot of cut categories" after you have already encoded, say
+so in Notes and plot the encoded values with the mapping printed alongside.
 
 === IF THE QUESTION GOES BEYOND THE LABS ===
 The labs stop at "ready for a model". If the question actually asks you to
@@ -514,10 +671,14 @@ For an UNFAMILIAR dataset or a supplied CSV:
 - Keep one logical step per block of code, in the order the question asks.
 
 === ANTI-PATTERNS (never do these) ===
+- Never let the TARGET column appear inside X. Build X with df.drop(columns=[target]) — never a hand-written feature_cols list or a "[c for c in df.columns if c not in [...]]" comprehension. A leaked target makes "which feature correlates most with price" answer "price" at r=1.000.
+- Never call .idxmax() on a target's correlation series without .drop(target) first — the target correlates 1.000 with itself and wins every time.
+- Never write X_train['price'] (or X_train[target]). After a correct split the target is only in y_train. Plot y_train directly; recombine with X_train.assign(price=y_train) when a correlation matrix must include it.
+- Never create a parallel '<col>_encoded' or '<col>_capped' column when the question says CONVERT or CAP that column. Overwrite it in place, or the original travels into X and forces a fragile exclusion list.
 - Never use df['col'].cat.codes or LabelEncoder for an ORDINAL column. seaborn's diamonds stores cut best-first, so cat.codes is exactly reversed. Write the explicit map dict.
 - Never call df.corr() on a frame that still holds text/category columns — it raises ValueError: could not convert string to float. Pass numeric_only=True.
 - Never call pd.get_dummies() without dtype=int — the default is bool.
-- Never pass palette= to a seaborn plot without also passing hue= and legend=False. It is deprecated and drops in 0.14.
+- Never pass palette= to sns.countplot/boxplot/barplot at all. Omit it. Without hue= it raises FutureWarning and breaks in seaborn 0.14, and the hue workaround keeps getting half-applied. (sns.heatmap's cmap= is a different argument and is fine.)
 - Never assert that a text column's dtype is 'object' — modern pandas reports 'str'.
 - Never pass a SINGLE dtype to describe()/select_dtypes() when selecting text columns. include='object' warns and crashes on tips/diamonds; include='str' crashes on tips/diamonds. Always write include=['object', 'str', 'category'].
 - Never use inplace=True or chained assignment for fillna — under copy-on-write it silently does nothing. Reassign the column.

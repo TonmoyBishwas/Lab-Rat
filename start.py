@@ -132,7 +132,12 @@ class UIHandler(BaseHTTPRequestHandler):
             headers["Content-Type"] = ct
         try:
             req = urllib.request.Request(upstream, data=body, headers=headers, method=method)
-            resp = urllib.request.urlopen(req, timeout=300)
+            # Generous timeout. The UI streams, so this bounds the gap BETWEEN
+            # chunks rather than the whole generation - but a non-streaming
+            # client (or a very long answer on a slow CPU) can otherwise 502
+            # mid-question, which would be indistinguishable from a crash to a
+            # student sitting an exam.
+            resp = urllib.request.urlopen(req, timeout=1800)
             self.send_response(resp.status)
             for k, v in resp.headers.items():
                 if k.lower() not in ("transfer-encoding", "connection"):
