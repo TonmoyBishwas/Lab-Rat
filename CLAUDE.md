@@ -34,6 +34,10 @@ ui/index.html            single generic chat UI; fetches /api/config at load
 ui/powerbi.html          special-mode UI (live .pbix schema, {MODEL_CONTEXT})
 start_powerbi.py         special launcher for the Power BI bridge
 eval/run_eval.py         runs a bank against the local model, logs answers
+eval/grade_class_test.py EXECUTES an answer to the REAL Class Test paper and
+                         checks 25 properties against values verified from the
+                         CSV. Bank: courses/da-python/evals/class_test_1.md,
+                         a real paper rather than a synthetic one.
 eval/check_answers.py    EXECUTES every ```python block in a run log and
                          reports which ones actually run (stdlib-only runner;
                          the answers themselves need pandas etc. on the dev box)
@@ -70,6 +74,18 @@ months of eval rounds:
 6. Small-model failure modes repeat across topics: formula hallucination,
    signature drift, over-aggregation, gratuitous imports, second-draft
    spirals. Author decoy questions for each when building new banks.
+7. **A rule that keeps drifting may be contradicted, not too weak.** Before
+   adding an escalation rung, grep the prompt for the thing you are banning
+   and check nothing else still shows it. The ladder assumes self-consistency.
+8. **Grade by executing, not by reading.** The worst defect found so far — the
+   target leaking into X, so "which feature correlates most with price"
+   answers "price" at r=1.000 — produces code that runs clean and reads as
+   correct. `eval/grade_class_test.py` exists because reading missed it.
+9. **Check the config before blaming the prompt.** Answers truncating
+   mid-question was ctx, not wording: a 12.4k-token prompt inside ctx 16384
+   left 3.1k for output. Keep ctx well above prompt + longest answer, and use
+   `--parallel 1` — llama-server's auto default opened 4 slots and re-prefilled
+   the system prompt on each.
 
 ## Models (July 2026 state)
 
