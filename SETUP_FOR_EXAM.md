@@ -174,7 +174,25 @@ That is the entire surface the Data Analytics Lab uses. `scikit-learn` is the
 pip name; you import it as `sklearn`. The course only needs `MinMaxScaler`,
 `StandardScaler` and `train_test_split` from it.
 
-### CRITICAL — pre-warm the seaborn dataset cache
+### What the Class Test actually needs
+
+A copy of another section's **Class Test 1** (Data Preprocessing & EDA, 60
+minutes, 30 marks) shows the paper supplies its own dataset and loader:
+
+```python
+df = pd.read_csv('diamonds.csv')      # CSV provided on the lab drive
+```
+
+So for that paper the only hard requirement is the five packages above —
+`sns.load_dataset` is never called and the network is irrelevant. **Save your
+notebook in the same folder as `diamonds.csv`**, because `read_csv` with a bare
+filename looks next to the notebook. A `FileNotFoundError` on question 1 is
+always this and nothing else.
+
+The seaborn cache pre-warm below is still worth doing as insurance, in case
+your section's paper uses `titanic` or `tips` from seaborn instead.
+
+### Pre-warm the seaborn dataset cache (insurance)
 
 Every DA Lab question starts with `sns.load_dataset('titanic')` or
 `sns.load_dataset('diamonds')`. **`load_dataset` downloads from GitHub the
