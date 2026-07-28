@@ -106,8 +106,8 @@ and separately for the categorical columns. Then show the counts of each class
 in `survived`, `pclass` and `embarked`, and state the overall survival rate.
 
 *Mirrors Lab2 Step 2. Expected: survived 549/342, rate 0.384; sex top male
-freq 577; embarked top S freq 646; pclass 3 -> 491. Probes
-`describe(include='object')` and `value_counts()`.*
+freq 577; embarked top S freq 644; pclass 3 -> 491. Probes
+`describe(include='str')` and `value_counts()`.*
 
 ---
 

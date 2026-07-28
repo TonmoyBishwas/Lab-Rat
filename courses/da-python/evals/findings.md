@@ -242,3 +242,100 @@ full bank, 8/8 and 1/1 on re-evals, no crashes outstanding.
 - Mellum2 remains untuned. If a future exam is time-critical it is the obvious
   candidate, but it needs its own full round — prompt calibration is
   model-specific and none of the above transfers.
+
+---
+
+## Round 4 — held-out test on `mpg`, and the `include='object'` warning
+*2026-07-28*
+
+### How it was found
+
+Not by the bank. The student asked for an exam-style question to test the
+appliance live, so I wrote an assignment-shaped paper on seaborn's **`mpg`** —
+a dataset the prompt had never been tuned on (the bank uses titanic, diamonds,
+penguins, tips) — with five traps planted deliberately:
+
+| Trap | Result |
+|---|---|
+| `name` has 305 unique values in 398 rows — one-hot would explode it to 300+ columns | **caught** — excluded from features, justified as an identifier |
+| `cylinders` is int64 with only 5 distinct values — bait to encode it | **caught** — left numeric |
+| Scale-before-split leakage | **caught** — split first, fit on train only, explained why |
+| Bare `df.corr()` raises on the mixed frame | **caught** — `numeric_only=True` |
+| "Strongest **negative** correlation with mpg" — intuition says horsepower | **caught** — computed it, got `weight (-0.832)`, and the Notes refused to name a winner it had not computed |
+
+Every number was verified independently and every one was right: 6 missing in
+`horsepower` (1.51%), grouped medians europe 76.5 / japan 75.0 / usa 105.0,
+acceleration Q1 13.825 / Q3 17.175 / bounds 8.80–22.20 / 7 outliers,
+shapes (318, 9) and (80, 9).
+
+That is the first fully held-out pass: new dataset, new column names, traps it
+had never been shown, and not one fabricated statistic.
+
+### The one real defect
+
+`df.describe(include='object')` emits a **`Pandas4Warning`** on pandas 3.0.3:
+
+```
+For backward compatibility, 'str' dtypes are included by select_dtypes when
+'object' dtype is specified. This behavior is deprecated ...
+```
+
+Cosmetic — the output is correct — but it drops a yellow warning block into the
+notebook that reads like an error to a marker, and it is **systematic**, not a
+one-off: `describe(include='object')` comes straight out of the Lab1/Lab2
+handouts, so it would have fired on every profiling answer.
+
+Verified on pandas 3.0.3 before patching (CLAUDE.md rule 5):
+
+| call | result |
+|---|---|
+| `include='object'` | correct output, **warns** |
+| `include=['object','str']` | correct output, silent |
+| `include='str'` | correct output, silent |
+
+### The patch
+
+Two rungs of the ladder, because the recipe is what the model actually follows:
+
+1. **Inside the profiling recipe**, next to the code it guards — `include='str'`
+   with the reason, plus the same rule extended to `select_dtypes`.
+2. **Anti-pattern bullet** — never pass `include='object'` to `describe()` or
+   `select_dtypes()`.
+
+Worth noting *why* the existing prompt did not already cover this. It said:
+
+> Do NOT assert a dtype is 'object' — modern pandas reports text columns as 'str'.
+
+That bans *asserting* `'object'`; it says nothing about *passing* `'object'` as a
+selector. Two different mistakes, one covered. Cheap lesson: a rule phrased
+about the model's prose does not automatically constrain the model's code.
+
+### Targeted re-eval — Q1, Q7, Q12 + Q19 as a regression control
+
+`python eval\run_eval.py da-python --only Q1,Q7,Q12,Q19`
+Log: `runs/20260728-2322_already-running-server_questions.md`
+
+| Q | verdict | note |
+|---|---|---|
+| Q1 | PASS | clean, zero warnings |
+| Q7 | PASS | patch landed — emitted `include='str'` |
+| Q12 | PASS | all diamonds values verified |
+| Q19 | PASS | unseen dataset, correct column names, no invention |
+
+**4/4 execute, 4/4 with zero warnings, 4/4 format-compliant** (one code block,
+Assumptions + Notes). Server confirmed as `gemma-4-E4B-it-Q4_K_M` before
+trusting the run — the runner attached to an already-running server, so the
+model in use was checked via `/v1/models` rather than assumed.
+
+### A bug in the bank, not the model
+
+Q7's expected-value note claimed `embarked` top S freq **646**. The model said
+644. The model was right — `titanic['embarked'].value_counts()` gives S 644,
+C 168, Q 77. Corrected in `questions.md`.
+
+Standing reminder: when an answer disagrees with the key, verify the key.
+
+### Status
+
+Prompt: 526 lines. Bank: 20 questions. Execution 19/20 on the full bank; 4/4 on
+this round plus a held-out `mpg` paper graded 23-24/25. No crashes outstanding.
