@@ -322,6 +322,23 @@ produce a runnable script.*
 
 ---
 
+## Q21 — MED · Profiling a dataset whose categoricals are `category` dtype
+
+Load the `tips` dataset from seaborn. Print its shape, the summary statistics
+for the numeric columns and separately for the categorical columns, the data
+types, and the number of unique values per column.
+
+*Added after the round-4 escape. Deliberately uses `tips`, whose sex/smoker/day/
+time columns are `category` dtype rather than `str` — unlike titanic, penguins
+and mpg. Both `describe(include='object')` and `describe(include='str')` raise
+`ValueError: No columns match the specified include or exclude data types`
+here, and the same is true of `diamonds`, which is the assignment dataset.
+Only `include=['object', 'str', 'category']` works on every dataset. PASS
+requires the three-type list AND the block executing. Expected shape (244, 7),
+4 categorical columns, nunique day 4 / time 2 / size 6.*
+
+---
+
 ## How to record results
 
 Run with `python eval\run_eval.py da-python`. Grade each `### Verdict` slot

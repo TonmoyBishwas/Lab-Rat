@@ -339,3 +339,84 @@ Standing reminder: when an answer disagrees with the key, verify the key.
 
 Prompt: 526 lines. Bank: 20 questions. Execution 19/20 on the full bank; 4/4 on
 this round plus a held-out `mpg` paper graded 23-24/25. No crashes outstanding.
+
+---
+
+## Round 4b — the round-4 patch was wrong, and the ORIGINAL was worse
+*2026-07-28*
+
+### What happened
+
+The round-4 patch changed the profiling recipe to `describe(include='str')`.
+While smoke-testing the USB deployment on `tips` — not a bank question, just a
+sanity check — the generated code crashed:
+
+```
+ValueError: No columns match the specified include or exclude data types
+```
+
+seaborn does not store text columns uniformly. Measured across five datasets:
+
+| dataset | text columns stored as |
+|---|---|
+| titanic, penguins, mpg | `str` |
+| **tips, diamonds** | **`category`** |
+
+So `include='str'` crashes on tips and diamonds. And checking the pre-patch
+state honestly: **`include='object'` crashes on them too.** The original prompt
+was not merely emitting a cosmetic warning — it would have produced a hard
+`ValueError` on any "summary statistics for the categorical columns" question
+about **diamonds, which is the assignment dataset.** Round 4 replaced one
+crashing form with a different crashing form and reported a pass.
+
+Full matrix, measured on pandas 3.0.3:
+
+| include= | titanic | penguins | mpg | tips | diamonds |
+|---|---|---|---|---|---|
+| `'object'` | warns | warns | warns | **CRASH** | **CRASH** |
+| `'str'` | ok | ok | ok | **CRASH** | **CRASH** |
+| `['object','str','category']` | ok | ok | ok | ok | ok |
+
+Only the three-type list is correct everywhere. It is also silent, and on
+titanic it returns *more* columns (7 vs 5) because it picks up `class`/`deck`,
+which are `category` and were being silently dropped from the categorical
+summary all along.
+
+### Why the bank missed it
+
+Q7 profiles **titanic** (`str` — passes). Q12 profiles diamonds but never calls
+`describe(include=...)`. Q1 asks only for numeric statistics. Every profiling
+question in the bank happened to sit on the safe side of the split, so the
+round-4 re-eval returned a clean 4/4 on a prompt that crashed on the assignment
+dataset.
+
+**Added Q21** — profiling `tips` specifically — so this cannot escape again.
+
+### The fix
+
+`include=['object', 'str', 'category']` in the recipe, with the dtype split
+spelled out next to the code and the crash message quoted, plus a rewritten
+anti-pattern bullet banning any single-dtype selector for text columns.
+
+### Verified end to end, through the USB deployment
+
+Both questions asked through the real UI proxy on the stripped USB copy, then
+every generated block executed:
+
+| question | emitted | result |
+|---|---|---|
+| tips profiling | `include=['object', 'str', 'category']` | RUNS CLEAN |
+| diamonds profiling | `include=['object', 'str', 'category']` | RUNS CLEAN |
+
+### Lessons
+
+1. **A green eval on a tuned bank proves the bank, not the prompt.** Round 4
+   reported 4/4 while shipping a crash on the assignment dataset. The escape was
+   caught by an unplanned smoke test on an unlisted dataset.
+2. **When patching an API detail, enumerate the inputs the rule will meet.**
+   "Verify the signature" (CLAUDE.md rule 5) was followed — on titanic only.
+   One dataset is not verification when the datasets differ.
+3. **Check whether the bug predates the patch.** The instinct was "I introduced
+   a regression". Half true: the patch was wrong, and so was the original, in a
+   worse way. Recording only the first half would have left the real severity
+   unstated.

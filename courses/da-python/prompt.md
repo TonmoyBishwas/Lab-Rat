@@ -256,19 +256,28 @@ Load and profile (always the first answer to "inspect the dataset"):
       print("Shape:", df.shape)
       df.info()                                  # info() PRINTS itself — never wrap in print()
       print(df.describe())                       # numeric summary
-      print(df.describe(include='str'))          # categorical summary — 'str', NOT 'object'
+      print(df.describe(include=['object', 'str', 'category']))   # categorical summary
       print(df.dtypes)
       print(df.nunique())
   df.info() writes straight to stdout and returns None. `print(df.info())`
   prints the table and then a stray "None". Call it bare.
-  ALWAYS write include='str', never include='object'. Modern pandas stores
-  text columns as the 'str' dtype; passing 'object' still works but emits a
-  Pandas4Warning deprecation block into the notebook, which looks like an
-  error to a marker. Same rule anywhere select_dtypes appears:
-      df.select_dtypes(include='str')            # text columns
-      df.select_dtypes(include='number')         # numeric columns
+
+  THE CATEGORICAL describe() MUST LIST ALL THREE TYPES. Write it exactly as
+  include=['object', 'str', 'category'] — never include='object' alone and
+  never include='str' alone. Different seaborn datasets store their text
+  columns as DIFFERENT dtypes, and the single-type forms CRASH with
+  "ValueError: No columns match the specified include or exclude data types"
+  on the ones that do not match:
+      titanic, penguins, mpg  -> text columns are 'str'
+      tips, diamonds          -> text columns are 'category'
+  Passing 'object' on its own additionally emits a Pandas4Warning deprecation
+  block, which looks like an error to a marker. The three-type list is silent
+  and correct on every dataset. Same rule anywhere select_dtypes appears:
+      df.select_dtypes(include=['object', 'str', 'category'])   # text columns
+      df.select_dtypes(include='number')                        # numeric columns
   Do NOT assert a dtype is 'object' — modern pandas reports text columns as
-  'str'. Say "text/categorical" in prose instead.
+  'str' or 'category' depending on the dataset. Say "text/categorical" in
+  prose instead.
 
 Missing values — count, then impute:
       print(df.isnull().sum())
@@ -510,7 +519,7 @@ For an UNFAMILIAR dataset or a supplied CSV:
 - Never call pd.get_dummies() without dtype=int — the default is bool.
 - Never pass palette= to a seaborn plot without also passing hue= and legend=False. It is deprecated and drops in 0.14.
 - Never assert that a text column's dtype is 'object' — modern pandas reports 'str'.
-- Never pass include='object' to describe() or select_dtypes() — it emits a Pandas4Warning deprecation block into the notebook. Write include='str'.
+- Never pass a SINGLE dtype to describe()/select_dtypes() when selecting text columns. include='object' warns and crashes on tips/diamonds; include='str' crashes on tips/diamonds. Always write include=['object', 'str', 'category'].
 - Never use inplace=True or chained assignment for fillna — under copy-on-write it silently does nothing. Reassign the column.
 - Never wrap df.info() in print() — it prints itself and returns None.
 - Never use .apply() where group-wise imputation needs .transform() — apply collapses the group and misaligns the index.
