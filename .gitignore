@@ -34,3 +34,6 @@ venv/
 
 # Per-course conversation history
 sessions-*.json
+
+# Scratch dir for eval/grade_class_test.py
+eval/_gradework/

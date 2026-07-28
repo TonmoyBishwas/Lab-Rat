@@ -420,3 +420,120 @@ every generated block executed:
    a regression". Half true: the patch was wrong, and so was the original, in a
    worse way. Recording only the first half would have left the real severity
    unstated.
+
+---
+
+## Round 5 — tuned against the REAL Class Test 1 paper
+*2026-07-29*
+
+### The input
+
+A copy of another section's Class Test 1 (60 minutes, 30 marks, diamonds).
+Same course, same dataset; the student's paper is expected to match its shape
+with different wording. This replaces guesswork with the actual target.
+
+Three things about it that no synthetic question had captured:
+
+1. **It supplies its own loader** — `pd.read_csv('diamonds.csv')` against a file
+   on the lab drive, not `sns.load_dataset`. After read_csv the text columns are
+   `str`, not `category`: the exact opposite of the seaborn path.
+2. **The split happens in Part 1**, so all of Part 2's EDA sits downstream of it
+   and must read the target from `y_train`.
+3. **Task 5c asks for a correlation over "X_train along with price"** — the
+   target has to be put back temporarily.
+
+### Method
+
+Built `eval/grade_class_test.py`: executes the generated code and checks 25
+specific properties against values verified from the CSV. This mattered more
+than usual, because the decisive failure produces code that **runs clean and
+looks right**. Reading the answer would not have caught it.
+
+Baseline, before any tuning: **15/25**.
+
+### What was actually broken
+
+| # | Defect | Consequence |
+|---|---|---|
+| 1 | `price` left inside `X` | Task 3b wrong; target leaks into every feature |
+| 2 | Task 5c printed `price (r = 1.000)` | 2-mark question confidently wrong; answer is carat 0.9216 |
+| 3 | Notes said "carat is strongest" while the code printed "price" | asserting a result contradicting its own output |
+| 4 | `palette=` without `hue=` | FutureWarning blocks under the cells |
+| 5 | answer truncated mid-Task-5b | Tasks 5b and 5c simply missing |
+
+Defect 1 is the root of 2 and 3. The model built features with a hand-written
+exclusion list; across runs it variously forgot the target, or dropped the
+one-hot `color` columns it had just created. Nothing raises an error either way.
+
+Defect 5 was not a prompt problem at all. The system prompt had grown to
+**12,366 tokens**; at ctx 16384 that left 3,115 for output, and a 30-mark answer
+needs ~3,500. `max_tokens: 4096` was a fiction — the real ceiling was the
+context. A two-turn conversation would have overflowed outright.
+
+### Patches
+
+Prompt (each at the rung its failure had earned):
+- split recipe mandates `.drop(columns=[target])`, bans feature lists and
+  comprehensions, and states the consequence
+- encode and cap **in place**, so no stale text or duplicate column reaches X
+- new recipe: `X_train.assign(price=y_train).corr()` to build the matrix,
+  `.drop('price')` before `idxmax()` to read it
+- new recipe: histogram of the target after a split reads `y_train`
+- new **RECIPES PART 3** — the whole class-test pipeline end to end, plus the
+  five places marks go missing in that shape
+- `palette=` escalated to a structural ban
+
+Config:
+- ctx 16384 -> **32768**, max_tokens 4096 -> **8192**. Cost: nothing measurable.
+  llama-server private RAM 5.54 GB at 32k vs 5.62 GB at 16k — KV is lazy.
+- **`--parallel 1`**. llama-server's auto default allocated FOUR slots and
+  rotates requests across them; each new slot re-prefills the 12k-token system
+  prompt from cold. One user needs one slot. After: turn 1 296s, turn 2 209s.
+- proxy read timeout 300s -> 1800s.
+
+### The palette lesson — contradictions beat escalation
+
+`palette=` kept drifting back after being banned. The cause was not weak
+wording: the PART 3 checklist still said "pass hue= alongside palette=" while
+the recipe said "omit palette=", and two worked examples elsewhere still showed
+it in use. **The model followed whichever it saw last.** Escalating the ban
+harder would never have worked. Making the prompt internally consistent — every
+categorical-plot example carrying no palette, the checklist agreeing with the
+recipe — fixed it immediately.
+
+Before adding a rung, grep the prompt for the thing you are banning and check
+nothing else contradicts it.
+
+### Result
+
+| | grader |
+|---|---|
+| baseline | **15/25** |
+| after tuning | **24/25**, repeatable |
+
+Also verified:
+- **two-turn workflow** (Part 1, then Part 2 as a follow-up): 7/7 continuity
+  checks — Part 2 uses `X_train`/`y_train` from turn 1, does not reload the CSV,
+  and the two blocks execute cleanly when concatenated as a notebook would
+- **CSV robustness**: run against a copy carrying an `Unnamed: 0` index column
+  and against one with 5% NaN injected into carat/price — both execute clean and
+  still answer carat
+
+### The one gap, and why it is not being escalated
+
+The model will not emit the `Unnamed: 0` drop line, at three escalation rungs
+(recipe aside, mandatory recipe line, anti-pattern bullet, then moved next to
+read_csv itself). It reads as defensive code the question did not ask for,
+which collides with this prompt's own "answer only what was asked" discipline.
+
+Impact is small and was measured, not assumed: against a CSV that HAS an index
+column the code runs clean and still answers carat 0.9216 — it simply carries
+one extra column in X, which is arguably compliant with "all other columns as
+predictors" anyway. A fourth rung would be the joypy mistake again (defensive
+over-engineering against a problem that barely exists), so it is documented as
+a ten-second human check in DEPLOY_README.txt instead.
+
+### Status
+
+Prompt: 12.4k tokens. Banks: 21 synthetic questions + the real paper.
+Class Test grader 24/25 repeatable, two-turn 7/7, full paper ~8 minutes.
