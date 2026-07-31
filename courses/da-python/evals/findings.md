@@ -537,3 +537,236 @@ a ten-second human check in DEPLOY_README.txt instead.
 
 Prompt: 12.4k tokens. Banks: 21 synthetic questions + the real paper.
 Class Test grader 24/25 repeatable, two-turn 7/7, full paper ~8 minutes.
+
+---
+
+## Round 6 — the penguins Class Test (2026-07-30)
+
+### What happened
+
+The student sat the real exam and scored roughly **15-19/30**. Round 5 had
+driven the diamonds grader to 24/25; that number turned out to be evidence
+about *the diamonds paper*, not about the course. See CLAUDE.md lesson 10.
+
+Reconstructed from the student's submitted notebook, cell by cell:
+
+| Defect | Cost | Owner |
+|---|---|---|
+| `.map({'Male':0,'Female':1})` on a file holding `MALE`/`FEMALE` — every row NaN, no error | ~2 marks + everything downstream | prompt |
+| Hand-typed `island_Boscoe` / `island_Targersen` -> KeyError, cell dead | ~3 marks | prompt |
+| 4-column impute list emitted with 3 (`bill_depth_mm` dropped) | ~1 mark + failed the "confirm zero missing" check | prompt |
+| `train_test_split` / `MinMaxScaler` used without imports in a follow-up turn | ~4 marks | workflow |
+| `.plot(kind='bar')` where the paper named `sns.barplot()` | ~1 mark | prompt |
+| top correlation pair printed twice, mirrored | presentation | prompt |
+| `palette=` without `hue=` — still drifting after 4 rungs | warning block | prompt |
+
+Only ONE of these (missing imports) came from typing tasks one at a time.
+Pasting the whole paper would have fixed that one and none of the others.
+
+### The unfixable-by-prompting class
+
+`penguins.csv` stores `MALE`/`FEMALE`; `sns.load_dataset('penguins')` returns
+`Male`/`Female`. No escalation rung can teach a model what is inside a file it
+has never read. That is why `dataset_scan.py` exists — it scans every row
+(costing zero context) and appends <=250 tokens of real column names, dtypes,
+missing counts and category values to the END of the system prompt, where it
+does not disturb the cached prefix.
+
+The CSV that reproduces the bug was sitting in `data/` the whole time and no
+bank ever touched it.
+
+### Round 6 changes
+
+- `dataset_scan.py` + `/api/scan` + a Dataset box in the UI
+- prompt: schema block is authoritative; case-robust `.map()` with a mandatory
+  `print("unmapped:", ...)` verification line; derive one-hot names rather than
+  typing them; count hand-typed column lists
+- prompt: **every block carries its own imports**, always
+- prompt: FOLLOW-UP section — continue from prior state, never re-derive
+- prompt: output brevity — no preamble, Notes only when the question asks
+- prompt: use the plotting function the paper NAMES
+- UI: Stop button, `isGenerating` reset in `finally`, `+` cancels in flight
+  (`newChat()` opened with `if (isGenerating) return;`, which is why the "+"
+  looked broken — one cause, two reported symptoms)
+
+### First measurement against the new bank (pre-patch prompt)
+
+| mode | score | wall clock |
+|---|---|---|
+| one-shot (whole paper) | **23/31** | 495 s, 7.5 KB, one block |
+| multi-turn (task by task) | **30/31** | 5 turns, 72-140 s each, ~1.5-2 KB each |
+
+(Two grader false positives were found and fixed while reading these: a derived
+identifier `island_dummy_cols` counted as an invented column name, and the
+"highest correlated pair" regex matched the `--- Task 5c ---` banner instead of
+the answer line. Numbers above are post-fix. Saved runs can be re-scored without
+the model: `python eval\grade_penguins_ct.py regrade <run.md>`.)
+
+**MULTI-TURN BEAT ONE-SHOT, and this reverses the standing advice.** The old
+DEPLOY_README said to paste the whole paper and explicitly warned against
+task-by-task. On this bank task-by-task scores higher *and* returns runnable
+code every ~2 minutes instead of nothing for 8. The FOLLOW-UP rules are why:
+each answer is short, carries its own imports, and continues from the existing
+variables rather than rebuilding them. Its only genuine failure was the guessed
+balance verdict (below) — the one-shot lost 7 further checks to a crash.
+
+All 20 static checks passed in both modes — every new rule landed. Two real
+defects remained:
+
+1. **Crash.** The model took the `np.triu` pair recipe and added an
+   indirection: `top = pairs.abs().idxmax(); names = top[0]` (a string), then
+   `corr.loc[names[0], names[1]]` -> `KeyError: 'l'`. Killed Part 2's output.
+   Fix (rung 2, structural): the recipe now uses tuple unpacking,
+   `f1, f2 = pairs.abs().idxmax()`, so there is no index to get wrong.
+
+2. **Guessed verdicts, inside `print()`.** Four `print("Observation: ...")`
+   lines, none computed, **two false**: "classes appear relatively balanced"
+   (they are 152/124/68, ratio 2.24) and "Gentoo exhibits the longest mean bill
+   length" (Chinstrap 48.83 > Gentoo 47.50). NOTES DISCIPLINE was scoped to the
+   Notes block, so the model moved the guess into a string literal in the code.
+   Fix: the rule now explicitly covers `print()`, with computed recipes for the
+   three verdict shapes (balance ratio, group idxmax, mean-vs-median skew).
+   All three verified against the real data before being pinned.
+
+Multi-turn answers came back 94-108 s and ~1.5 KB each, versus 495 s and 7.5 KB
+for the one-shot — the brevity and no-re-derivation rules are working.
+
+### Iteration 2 — the patch fixed one mode and broke the other
+
+| mode | pre-patch | after patch 1 |
+|---|---|---|
+| one-shot | 23/31 | **29/31** |
+| multi-turn | 30/31 | **21/31**  <- regression |
+
+The crash fix held (one-shot now executes clean, `culmen_ratio` present,
+train/test 275/69, the pair line prints `flipper_length_mm and body_mass_g`).
+But multi-turn fell nine checks, and both causes were mine.
+
+**Cause 1 — I contradicted myself.** CLAUDE.md lesson 7 says a rule that keeps
+drifting may be contradicted rather than too weak; this time the contradiction
+was in the rule I had just written. To justify repeating imports I wrote:
+
+    "Each answer goes into a SEPARATE notebook cell that may be run in any
+     order or after a kernel restart."
+
+That is a licence to reload the data, and the model took it — every follow-up
+turn opened with
+
+    # --- Load Data (Assuming df from Task 1 is available and clean) ---
+    try:
+        df = pd.read_csv('penguins.csv')
+
+which resets df to the raw file and destroys the imputation, the encoding and
+the derived column from earlier cells. Concatenated as a notebook runs them,
+Task 3 then died with `KeyError: 'culmen_ratio'` and took six probe checks with
+it. Note the model even wrote "assuming df from Task 1 is available" and then
+reloaded anyway — it was following the letter of my justification.
+
+Fix: imports repeat because they are IDEMPOTENT; cells run top to bottom, in
+order, once; `pd.read_csv` appears exactly once, in the first answer. The
+"any order / kernel restart" wording is gone.
+
+**Cause 2 — suppressing a symptom without installing the replacement.** Banning
+guessed verdicts inside `print()` worked: they stopped appearing there. The
+model moved them into `# Notes:` comments and the prose Notes block instead,
+still uncomputed and still wrong ("Chinstrap has the largest average flipper
+length" — it is Gentoo; "Gentoo having the longest average bill length" — it is
+Chinstrap; and a fabricated r = 0.7911 when the code had printed 0.8663).
+
+The rule lived in NOTES DISCIPLINE, a rule-list section. Per CLAUDE.md lesson 3
+the model follows RECIPES. So the computation now sits inside the plotting
+recipes themselves — countplot ships with a balance ratio, boxplot with
+`groupby().mean().idxmax()`, hist with a mean-vs-median skew test — and the ban
+covers print strings, comments AND Notes.
+
+**Also fixed:** the model had begun wrapping its Notes in a bare ``` fence,
+which made every turn parse as two code blocks. RESPONSE FORMAT now states
+exactly one fenced block per answer, containing only runnable Python.
+
+### Iteration 3 — both modes fixed, then a worse defect surfaced
+
+| mode | pre-patch | patch 1 | patch 2 |
+|---|---|---|---|
+| one-shot | 23/31 | 29/31 | **30/31** |
+| multi-turn | 30/31 | 21/31 | **31/31** |
+
+The contradiction fix worked exactly as intended: `read_csv` now appears ONCE
+across all five turns, each turn emits exactly one fenced block, and every
+verdict is computed (`Max/Min ratio = 2.24 -> IMBALANCED`, `Largest:` via
+`idxmax()`, skew from mean-vs-median).
+
+The one remaining one-shot miss is cosmetic: it drew the histogram with
+`ax.hist(...)` through `plt.subplots()` rather than `plt.hist(...)` directly.
+Same function, 25 bins, correct. Not escalated — a single deviation in the
+secondary mode is noise under CLAUDE.md rule 4.
+
+### The defect the grader could not see
+
+Reading the 31/31 run by hand turned up something the harness was structurally
+blind to. **The model appends an invented output transcript after the code**,
+and the invented values are wrong while the code above them is right:
+
+    Species counts:            <- FABRICATED, and two species are SWAPPED
+    Adelie      152
+    Chinstrap   124                (really Gentoo 124)
+    Gentoo       68                (really Chinstrap 68)
+    Largest: Chinstrap         <- WRONG; it is Gentoo, 217.18 vs 197.00
+
+Also fabricated: `mean body_mass_g 3546.7` (really 4202.6) and
+`r = 0.9896` (the executed code printed 0.8783).
+
+This is the most dangerous shape any of these defects has taken. The code is
+correct and prints the right answer, so every execution-based check passes —
+but the student reads the chat window, not their own stdout, and copies the
+fabricated winner onto their script. `eval/grade_class_test.py`'s founding
+lesson was "grade by executing, not by reading"; the corollary is that
+executing alone is also not enough. **Grade the prose too.**
+
+Fixes:
+- prompt: an explicit structural ban on writing any output/transcript/"Output:"
+  section, quoting the real swapped-species example, in RESPONSE FORMAT where
+  the model actually follows structure
+- grader: two new prose-only checks that strip the code fences first — one for
+  pasted-output tells (`dtype:`, `Name: count`, `Output:`), one asserting no
+  wrong winner is named. Re-scoring the "31/31" run against them gives 31/33.
+
+### Iteration 4 — closed
+
+| mode | pre-round | patch 1 | patch 2 | **final** |
+|---|---|---|---|---|
+| one-shot (whole paper) | 23/31 | 29/31 | 30/31 | **33/33** |
+| multi-turn (task by task) | 30/31 | 21/31 | 31/31 | **33/33** |
+
+(33 checks, not 31 — the two prose checks were added after iteration 3 exposed
+the fabricated-transcript defect. Both modes pass them.)
+
+Confirmed in the final run: `read_csv` appears exactly once across all five
+turns; one fenced block per answer; every verdict computed rather than asserted;
+no invented output transcript; `sex` survives encoding with 0 unmapped; the
+correlation pair prints `flipper_length_mm and body_mass_g`.
+
+One further grader false positive was fixed while closing: the one-shot wrote
+`target = 'species'; X = df.drop(columns=[target])`, which the static regex
+rejected for not containing the literal. Correctness was never in doubt — the
+probe reported 9 columns in X with `species` absent. Three grader false
+positives in total this round (`island_dummy_cols`, the banner-matching pair
+regex, and this one); each inflated or deflated a score before being caught by
+reading the runs by hand. **A new grader needs its own review pass before its
+numbers mean anything.**
+
+Deliberately not escalated: the one-shot draws its histogram via
+`plt.subplots()` + `ax.hist(...)` rather than `plt.hist(...)`. Same function,
+correct bins, single occurrence in the secondary mode — noise under rule 4.
+
+### Deployed
+
+`E:\Data Analytics` synced and verified byte-identical: `start.py`,
+`dataset_scan.py` (new), `ui/index.html`, `courses/da-python/prompt.md`,
+`course.json`, `models.json`, `READ_ME_FIRST.txt`. Scanner verified running
+from the USB path itself (resolves penguins, reports MALE/FEMALE).
+
+Prompt: 14.3k tokens including the injected dataset block. Up from 11.8k — the
+new rules cost more than the diamonds trivia they replaced. Worth a trim pass
+next round, but prefill is a once-per-session cost on a cached prefix and the
+answers themselves got much shorter (multi-turn turns are 92-155 s and ~2 KB,
+against 522 s and 6.8 KB for the whole paper in one message).

@@ -458,6 +458,44 @@
     flex-shrink: 0;
   }
 
+  /* Dataset bar - set once at the start of the exam. The scanned schema is
+     appended to the END of the system prompt so the cached prefix survives. */
+  #dataset-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+  #dataset-bar label { flex-shrink: 0; }
+  #ds-input {
+    flex: 1;
+    min-width: 0;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 4px 8px;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  #ds-input:focus { outline: none; border-color: var(--accent); }
+  #ds-btn {
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  #ds-btn:hover { background: var(--surface2); }
+  #ds-status { flex-shrink: 0; color: var(--text3); white-space: nowrap; }
+  #ds-status.ok  { color: var(--green); }
+  #ds-status.bad { color: var(--red); }
+
   #input-row {
     display: flex;
     align-items: flex-end;
@@ -518,6 +556,10 @@
   }
   #send-btn:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
   #send-btn:disabled { background: var(--input-bg); border-color: var(--input-bg); color: var(--text3); cursor: not-allowed; }
+  /* While a reply is streaming the same button becomes Stop - a wedged
+     generation used to leave the whole UI dead with no way out. */
+  #send-btn.stop { background: var(--red, #f14c4c); border-color: var(--red, #f14c4c); color: #fff; }
+  #send-btn.stop:hover { filter: brightness(1.1); }
 
   #input-hint {
     font-size: 11px; color: var(--text3);
@@ -688,13 +730,21 @@
 
 <!-- Input area -->
 <div id="input-area">
+  <div id="dataset-bar">
+    <label for="ds-input">Dataset</label>
+    <input id="ds-input" list="ds-builtin" spellcheck="false"
+           placeholder="penguins.csv   or   C:\path\to\the\file.csv">
+    <datalist id="ds-builtin"></datalist>
+    <button id="ds-btn" onclick="loadDataset()">Load</button>
+    <span id="ds-status">not set</span>
+  </div>
   <div id="input-row">
     <button id="attach-btn" onclick="document.getElementById('file-input').click()" title="Attach file">
       <svg class="icon"><use href="#icon-paperclip"/></svg>
     </button>
     <input type="file" id="file-input" multiple accept=".txt,.py,.csv,.json,.md,.js,.ts,.html,.css,.xml,.yaml,.yml,.log,.ipynb,.r,.java,.c,.cpp,.h">
     <textarea id="msg-input" rows="1" placeholder="Send a message"></textarea>
-    <button id="send-btn" onclick="sendMessage()">Send</button>
+    <button id="send-btn" onclick="onSendClick()">Send</button>
   </div>
   <div id="input-hint">Model: <span id="hint-model">loading</span></div>
 </div>
@@ -735,6 +785,57 @@ async function loadCourseConfig() {
   } catch (e) {}
 }
 loadCourseConfig();
+
+// ─── Dataset schema injection ────────────────────────────────────────────────
+// The model cannot see the data file, so it guesses category spelling and
+// capitalisation - that is how {'Male':0,'Female':1} silently NaN-ed a column
+// of MALE/FEMALE in the July 2026 Class Test. Scan the file, append the real
+// names and values to the system prompt.
+//
+// Appended at the END on purpose: llama-server caches the prompt PREFIX, so
+// putting variable content last keeps the expensive stable part cached.
+let datasetBlock = '';
+
+async function populateDatasetList() {
+  try {
+    const r = await fetch('/api/datasets');
+    if (!r.ok) return;
+    const { builtin } = await r.json();
+    document.getElementById('ds-builtin').innerHTML =
+      (builtin || []).map(n => `<option value="${escHtml(n)}">`).join('');
+  } catch (e) {}
+}
+
+async function loadDataset() {
+  const spec = document.getElementById('ds-input').value.trim();
+  const st = document.getElementById('ds-status');
+  if (!spec) {
+    datasetBlock = '';
+    st.className = '';
+    st.textContent = 'not set';
+    return;
+  }
+  st.className = '';
+  st.textContent = 'scanning...';
+  try {
+    const r = await fetch('/api/scan?spec=' + encodeURIComponent(spec));
+    const d = await r.json();
+    if (!d.ok) {
+      datasetBlock = '';
+      st.className = 'bad';
+      st.textContent = d.error || 'not found';
+      return;
+    }
+    datasetBlock = d.text;
+    st.className = 'ok';
+    st.textContent = `${d.n_rows} rows x ${d.n_cols} cols`;
+    st.title = d.text;
+  } catch (e) {
+    datasetBlock = '';
+    st.className = 'bad';
+    st.textContent = 'scan failed';
+  }
+}
 
 // ─── State ───────────────────────────────────────────────────────────────────
 let history = [];
@@ -799,6 +900,12 @@ function init() {
   setInterval(checkConnection, 8000);
   setupFileInput();
   setupDragDrop();
+  populateDatasetList();
+  const ds = document.getElementById('ds-input');
+  ds.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); loadDataset(); }
+  });
+  ds.addEventListener('change', loadDataset);   // picking from the datalist
 }
 
 // ─── Connection check ────────────────────────────────────────────────────────
@@ -847,7 +954,12 @@ function toggleSettings() {
 
 // ─── New chat ────────────────────────────────────────────────────────────────
 async function newChat() {
-  if (isGenerating) return;
+  // Used to `return` here, which made "+" look broken whenever a reply was
+  // still streaming. Cancel the reply and carry on instead.
+  if (isGenerating) {
+    stopGeneration();
+    await new Promise(r => setTimeout(r, 120));
+  }
   await saveSession();
   history = [];
   currentSessionId = Date.now().toString();
@@ -932,6 +1044,30 @@ function removeFile(i) {
   renderFileChips();
 }
 
+// ─── Send / Stop ─────────────────────────────────────────────────────────────
+// One button, two jobs. While streaming it is a Stop button, so a slow or
+// wedged reply can always be cancelled instead of locking the UI.
+function onSendClick() {
+  if (isGenerating) stopGeneration();
+  else sendMessage();
+}
+
+function stopGeneration() {
+  if (abortCtrl) {
+    try { abortCtrl.abort(); } catch {}
+  }
+}
+
+// Single place that owns the streaming/idle button state.
+function setGenerating(on) {
+  isGenerating = on;
+  const btn = document.getElementById('send-btn');
+  if (!btn) return;
+  btn.disabled = false;             // never leave it dead
+  btn.textContent = on ? 'Stop' : 'Send';
+  btn.classList.toggle('stop', on);
+}
+
 // ─── Send message ────────────────────────────────────────────────────────────
 function sendMessage() {
   const input = document.getElementById('msg-input');
@@ -970,8 +1106,7 @@ function sendMessage() {
 
 // ─── Stream response ─────────────────────────────────────────────────────────
 async function streamResponse() {
-  isGenerating = true;
-  document.getElementById('send-btn').disabled = true;
+  setGenerating(true);
 
   const aiDiv = appendMessage('ai', null);
   const bodyEl = aiDiv.querySelector('.msg-body');
@@ -982,10 +1117,13 @@ async function streamResponse() {
   abortCtrl = new AbortController();
   let contentRaw = '';
   let reasoningRaw = '';
+  let stopped = false;
 
   const cleanHistory = history.map(m => ({ role: m.role, content: m.content }));
-  const messages = cfg.sysPrompt
-    ? [{ role: 'system', content: cfg.sysPrompt }, ...cleanHistory]
+  // Dataset block goes LAST so the big stable prompt stays a cacheable prefix.
+  const sysText = [cfg.sysPrompt, datasetBlock].filter(Boolean).join('\n\n');
+  const messages = sysText
+    ? [{ role: 'system', content: sysText }, ...cleanHistory]
     : cleanHistory;
 
   try {
@@ -1069,11 +1207,16 @@ async function streamResponse() {
       }
     }
   } catch (e) {
-    if (e.name !== 'AbortError') {
+    if (e.name === 'AbortError') {
+      stopped = true;
+    } else {
       bodyEl.innerHTML = `<span style="color:var(--red)">Error: ${escHtml(e.message)}</span>`;
     }
   }
 
+  // Everything below must run even if rendering throws, or isGenerating would
+  // stay true forever and silently disable both Send and the + new-chat button.
+  try {
   thinkEl.classList.remove('streaming');
 
   // Resolve final answer: prefer pure content; fall back to stripping inline <think>
@@ -1085,7 +1228,8 @@ async function streamResponse() {
       finalAnswer = parsed.main;
     }
   }
-  if (!finalAnswer) finalAnswer = '[no response]';
+  if (stopped && finalAnswer) finalAnswer += '\n\n_[stopped]_';
+  if (!finalAnswer) finalAnswer = stopped ? '[stopped before any output]' : '[no response]';
 
   history.push({ role: 'assistant', content: finalAnswer, reasoning: reasoningRaw });
   saveSession();
@@ -1098,10 +1242,11 @@ async function streamResponse() {
   actions.appendChild(btn);
 
   scrollToBottom();
-  isGenerating = false;
-  abortCtrl = null;
-  document.getElementById('send-btn').disabled = false;
-  document.getElementById('msg-input').focus();
+  } finally {
+    setGenerating(false);
+    abortCtrl = null;
+    document.getElementById('msg-input').focus();
+  }
 }
 
 // ─── Append message ──────────────────────────────────────────────────────────

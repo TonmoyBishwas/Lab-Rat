@@ -21,7 +21,13 @@ most valuable files in the repo.
 ```
 start.py                 generic launcher: python start.py <course-id>
                          boots llama-server (:11434) + UI/proxy server (:8080)
-                         serves /api/config from the course folder
+                         serves /api/config, /api/datasets, /api/scan
+dataset_scan.py          stdlib CSV scanner -> compact schema block appended to
+                         the END of the system prompt (prefix-cache friendly).
+                         Reads EVERY row (costs no context) but emits <=250
+                         tokens. Exists because the model cannot see the file:
+                         .map({'Male':0}) on a file holding MALE silently NaN-s
+                         the column, and hand-typed one-hot names KeyError.
 models.json              model registry: priority order, ctx, extra flags
 courses/<id>/
     course.json          name, disguise title, tagline, temp, max_tokens,
@@ -37,7 +43,15 @@ eval/run_eval.py         runs a bank against the local model, logs answers
 eval/grade_class_test.py EXECUTES an answer to the REAL Class Test paper and
                          checks 25 properties against values verified from the
                          CSV. Bank: courses/da-python/evals/class_test_1.md,
-                         a real paper rather than a synthetic one.
+                         a real paper rather than a synthetic one (diamonds,
+                         REGRESSION target, no missing values).
+eval/grade_penguins_ct.py  The SECOND real paper (penguins, CLASSIFICATION
+                         target, real NaNs, derived feature). Runs BOTH the
+                         one-shot and the task-by-task flow, then appends a
+                         PROBE to the generated code and inspects the live
+                         df / X_train / y_train — so a column that silently
+                         became all-NaN is caught by measurement, not reading.
+                         Bank: courses/da-python/evals/class_test_2_penguins.md
 eval/check_answers.py    EXECUTES every ```python block in a run log and
                          reports which ones actually run (stdlib-only runner;
                          the answers themselves need pandas etc. on the dev box)
@@ -86,6 +100,32 @@ months of eval rounds:
    left 3.1k for output. Keep ctx well above prompt + longest answer, and use
    `--parallel 1` — llama-server's auto default opened 4 slots and re-prefilled
    the system prompt on each.
+10. **One paper is not the course. Overfitting is the DEFAULT outcome.** The
+   July 2026 round drove a 25-check grader to 24/25 on the diamonds paper; the
+   student then sat a penguins paper and scored roughly 15/30. Every defect it
+   exposed lived in a step diamonds does not have — real NaNs, case-sensitive
+   categories, a derived feature, a classification target. Always tune against
+   at least two real papers on different datasets, and treat a single-paper
+   score as evidence about that paper only.
+11. **Some facts cannot be prompted, only injected.** No escalation rung can
+   teach the model that the CSV holds `MALE` and not `Male` — it has never seen
+   the file. `dataset_scan.py` exists for exactly the class of bug that prompt
+   engineering cannot reach. Reach for injection, not a fourth rung, whenever
+   the missing knowledge is *about the data*.
+12. **Split derivable from semantic.** Structure (column names, dtypes, missing
+   counts, category values, ranges) belongs to the scanner. Meaning and
+   counter-intuitive results (Fair < Ideal is an ordering, "Ideal is the
+   CHEAPEST cut") belong in the prompt. Keeping derivable facts in the prompt
+   is what made it 47 KB.
+13. **The UI can manufacture what looks like a model failure.** `newChat()`
+   opened with `if (isGenerating) return;`, so a slow generation silently made
+   the "+" button a no-op, and there was no Stop control — the only escape was
+   killing the console. Two reported "bugs", one cause. Check the client before
+   re-tuning the prompt.
+14. **A student under exam pressure types tasks one at a time.** They cannot
+   paste a printed paper. Any workflow that only works when the whole paper
+   arrives in one message will not survive the exam hall — the prompt must
+   handle follow-up turns (continue, don't re-derive; always repeat imports).
 
 ## Models (July 2026 state)
 

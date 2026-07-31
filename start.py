@@ -17,7 +17,9 @@ Everything runs offline from this folder: no pip, no admin, no internet.
 import subprocess, sys, os, time, signal, json, threading
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import urlparse, parse_qs
+
+import dataset_scan
 
 ROOT     = os.path.dirname(os.path.abspath(__file__))
 SERVER   = os.path.join(ROOT, "llama-cpp", "llama-server.exe")
@@ -180,6 +182,23 @@ class UIHandler(BaseHTTPRequestHandler):
             with sessions_lock:
                 data = load_sessions()
             self.send_json(200, data)
+
+        elif p == "/api/datasets":
+            # Names of the CSVs vendored in data\ , for the UI dropdown.
+            self.send_json(200, {"builtin": dataset_scan.list_builtin(ROOT)})
+
+        elif p == "/api/scan":
+            # Scan a CSV and return the schema block the UI appends to the
+            # system prompt. Accepts an absolute path, a path relative to this
+            # folder, or a bare built-in name - so one control covers both a
+            # teacher-supplied file and a vendored dataset.
+            spec = (parse_qs(urlparse(self.path).query).get("spec") or [""])[0]
+            path = dataset_scan.resolve(spec, ROOT)
+            if not path:
+                self.send_json(200, {"ok": False,
+                                     "error": f"could not find '{spec}'"})
+            else:
+                self.send_json(200, dataset_scan.scan(path))
 
         elif p.startswith("/v1/") or p == "/health":
             self.proxy("GET")
