@@ -23,6 +23,7 @@ import dataset_scan
 
 ROOT     = os.path.dirname(os.path.abspath(__file__))
 SERVER   = os.path.join(ROOT, "llama-cpp", "llama-server.exe")
+SERVER_LOG = os.path.join(ROOT, "llama-server.log")
 MODELS   = os.path.join(ROOT, "models")
 COURSES  = os.path.join(ROOT, "courses")
 UI_FILE  = os.path.join(ROOT, "ui", "index.html")
@@ -279,7 +280,17 @@ def start_llama_server(model_name, model_path, ctx=None):
            "--parallel", "1",
            "--port", str(AI_PORT), "--host", "127.0.0.1", "--no-mmap"]
     cmd += FLAGS_FOR.get(model_name, [])
-    return subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # Keep the server's own output. It used to go to DEVNULL, which made every
+    # startup failure look identical: a bare "Timeout" with no cause. The one
+    # that actually happened was "couldn't bind HTTP server socket" because
+    # another program already owned the port.
+    # Fall back to DEVNULL if the folder is not writable (running straight off
+    # a read-only pendrive). Losing the log must never cost us the launcher.
+    try:
+        log = open(SERVER_LOG, "w", encoding="utf-8", errors="replace")
+    except OSError:
+        log = subprocess.DEVNULL
+    return subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT)
 
 def wait_healthy(timeout=180):
     """Poll llama-server /health. Returns seconds waited, or None on timeout."""
@@ -357,6 +368,17 @@ def run():
     waited = wait_healthy()
     if waited is None:
         print("\n\n  Timeout: AI server did not start.")
+        # Show the reason instead of making the student guess.
+        try:
+            tail = [l for l in open(SERVER_LOG, encoding="utf-8",
+                                    errors="replace").read().splitlines() if l.strip()][-6:]
+            if tail:
+                print("  Last lines from the AI server:\n")
+                for l in tail:
+                    print("    " + l[:150])
+                print(f"\n  Full log: {SERVER_LOG}")
+        except Exception:
+            pass
         for p in procs: p.terminate()
         input("  Press Enter to exit...")
         sys.exit(1)

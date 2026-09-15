@@ -37,3 +37,6 @@ sessions-*.json
 
 # Scratch dir for eval/grade_class_test.py
 eval/_gradework/
+
+# runtime log from llama-server (written by start.py)
+llama-server.log

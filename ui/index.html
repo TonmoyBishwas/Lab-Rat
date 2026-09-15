@@ -784,7 +784,9 @@ async function loadCourseConfig() {
     if (COURSE_CFG.max_tokens) document.getElementById('cfg-maxtokens').value = COURSE_CFG.max_tokens;
   } catch (e) {}
 }
-loadCourseConfig();
+// Kept as a promise so init() can wait for the system prompt before warming
+// the model with it.
+const cfgReady = loadCourseConfig();
 
 // ─── Dataset schema injection ────────────────────────────────────────────────
 // The model cannot see the data file, so it guesses category spelling and
@@ -806,9 +808,17 @@ async function populateDatasetList() {
   } catch (e) {}
 }
 
+// The exam workflow is one question block per NEW TAB. `datasetBlock` is a JS
+// variable, so a real browser tab starts with it empty — the student would be
+// back to the model guessing column names, which is the bug this whole feature
+// exists to kill. Remember the spec and re-scan it on load. (The "+" new-chat
+// button never lost it; a new tab did.)
+const DS_KEY = 'labrat.dataset';
+
 async function loadDataset() {
   const spec = document.getElementById('ds-input').value.trim();
   const st = document.getElementById('ds-status');
+  try { spec ? localStorage.setItem(DS_KEY, spec) : localStorage.removeItem(DS_KEY); } catch (e) {}
   if (!spec) {
     datasetBlock = '';
     st.className = '';
@@ -830,6 +840,7 @@ async function loadDataset() {
     st.className = 'ok';
     st.textContent = `${d.n_rows} rows x ${d.n_cols} cols`;
     st.title = d.text;
+    if (warmed) warmUp();          // the prompt tail changed — re-cache it
   } catch (e) {
     datasetBlock = '';
     st.className = 'bad';
@@ -906,6 +917,16 @@ function init() {
     if (e.key === 'Enter') { e.preventDefault(); loadDataset(); }
   });
   ds.addEventListener('change', loadDataset);   // picking from the datalist
+  // Restore the remembered dataset, THEN warm the model with the exact system
+  // prompt the first real question will use — otherwise the warm-up caches a
+  // prefix that the dataset block immediately invalidates.
+  (async () => {
+    await cfgReady;
+    let saved = null;
+    try { saved = localStorage.getItem(DS_KEY); } catch (e) {}
+    if (saved) { ds.value = saved; await loadDataset(); }   // survives a new tab
+    warmUp();
+  })();
 }
 
 // ─── Connection check ────────────────────────────────────────────────────────
@@ -1105,6 +1126,49 @@ function sendMessage() {
 }
 
 // ─── Stream response ─────────────────────────────────────────────────────────
+// ─── Prompt warm-up ──────────────────────────────────────────────────────────
+// The system prompt is ~21k tokens, and llama-server must process ALL of it
+// before the first token of the first answer appears — measured at 3.9 min on
+// the dev box, and the exam PC is slower. Every message after that is nearly
+// free, because the server keeps the processed prefix cached.
+//
+// So the cost is real but it is paid ONCE, and it does not have to be paid by
+// question 1. Fire a 1-token request as soon as the page loads: the wait then
+// happens in the background while the student is still reading the paper.
+// This is what the README used to ask them to do by hand ("type hi first"),
+// which is exactly the kind of step people forget under exam pressure.
+let warmed = false;
+
+async function warmUp() {
+  const sysText = [cfg.sysPrompt, datasetBlock].filter(Boolean).join('\n\n');
+  if (!sysText) return;
+  // Never let the warm-up throw: it runs during init(), and a broken init on
+  // exam day costs far more than a cold cache.
+  const st = document.getElementById('ds-status') || { };
+  const prev = { text: st.textContent || '', cls: st.className || '' };
+  st.textContent = 'warming up the model...';
+  st.className = '';
+  try {
+    await fetch(BASE() + '/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'local',
+        messages: [{ role: 'system', content: sysText },
+                   { role: 'user', content: 'hi' }],
+        stream: false,
+        max_tokens: 1,
+      }),
+    });
+    warmed = true;
+    st.textContent = prev.text + ' · ready';
+    st.className = prev.cls;
+  } catch (e) {
+    st.textContent = prev.text;
+    st.className = prev.cls;
+  }
+}
+
 async function streamResponse() {
   setGenerating(true);
 

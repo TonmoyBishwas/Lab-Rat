@@ -770,3 +770,256 @@ new rules cost more than the diamonds trivia they replaced. Worth a trim pass
 next round, but prefill is a once-per-session cost on a cached prefix and the
 answers themselves got much shorter (multi-turn turns are 92-155 s and ~2 KB,
 against 522 s and 6.8 KB for the whole paper in one message).
+
+---
+
+## Iteration 5 — the syllabus changed (Sept 2026): ML + DL, bank.csv
+
+The course moved to Parts 3-4 (Machine Learning pipeline, Deep Learning with
+MLPClassifier). Handouts: `G:\UIU G\8th new\DA LAB\adsfs\`. Another section's
+CT-2 obtained 2026-09-15 and added as `evals/class_test_3_bank.md` with grader
+`eval/grade_bank_ct2.py` and ground truth `eval/ref_bank_ct2.py`.
+
+### The prompt actively forbade the new syllabus
+
+Before writing a single recipe, grepping for the APIs the handouts teach found
+the prompt saying:
+
+  * *"sklearn is allowed ONLY for MinMaxScaler, StandardScaler, train_test_split"*
+  * *"The labs stop at 'ready for a model'"*
+  * *"Never import ... SimpleImputer / OneHotEncoder / ColumnTransformer"*
+
+Parts 3-4 are built on exactly those. An omission makes the model improvise; a
+BAN makes it refuse. This is rule 7 (a rule that drifts may be contradicted) at
+syllabus scale, and it is now rule 15: **when new material lands, fix the
+contradictions before adding anything.** The import section now splits the two
+cases — pandas for hand-cleaning (Part 1), SimpleImputer/OneHotEncoder inside a
+Pipeline (Parts 3-4) — which is the distinction the course actually draws.
+
+### A fresh chat is not a fresh notebook
+
+The student's workflow changed too: they now paste ONE QUESTION BLOCK (all of
+a, b, c) into a BRAND-NEW TAB, then open another tab for the next block. Q2 and
+Q3 therefore arrive with **zero history** — no dataset description, no starter
+code, no memory of what Q1 built. Nothing in context can tell the model the
+notebook exists; only the question's own wording can ("Q3", "your trained
+model", "the matrix from Q2(a)").
+
+The fix is a **canonical variable-name contract** published in the prompt
+(`X_train_s`, `X_test_s`, `logreg`, `rf`, `mlp`, `cm`, `pipe_rf`/`pipe_mlp`).
+Both the block that creates a name and the block that consumes it are written
+by the same prompt, so they agree by construction. Supporting rules:
+"re-derive the cheap (predictions), never the expensive (read_csv, split,
+fit)", and a required `# continues the notebook — uses: ...` header that turns
+a silent mismatch into something the student sees before running the cell.
+
+`eval/grade_bank_ct2.py` reproduces this exactly: each block is a separate
+`[system, user]` pair with the earlier answers deliberately absent, and the
+three answers are then concatenated and executed as one notebook.
+
+### Measured: a new tab is nearly free
+
+From the llama-server log, same session:
+
+    block 1   prompt eval  21465 tokens / 232.7 s   (92.2 tok/s)
+    block 2   prompt eval     99 tokens /   1.9 s
+
+The prefix cache holds across chats because the system prompt is byte-identical,
+so only the new user message is processed. **The 21k-token prompt is paid once
+per session, not once per tab** — which is what makes the three-tabs workflow
+viable at all. Generation runs ~8.2 tok/s at this context depth, so blocks cost
+~2 min each after the first.
+
+That first 3.9 minutes (longer on the exam i7) was the student's worst
+experience last time. It is now paid in the background: `ui/index.html` fires a
+1-token warm-up request on page load, after restoring the remembered dataset,
+so the prefill happens while the paper is being read. The README's old advice
+("type hi first") depended on remembering to do it under exam pressure.
+
+### Two real bugs found by measurement, not by reading
+
+1. **The scanner emitted the wrong loader.** It sniffed `;` correctly for its
+   own parsing and then printed `df = pd.read_csv('bank.csv')` anyway. Without
+   `sep=';'` pandas returns ONE column named `age;"job";"marital";...` and
+   every task dies. Injection has to cover *how to load* the file, not just
+   what is in it.
+2. **`llama-server` would not start** because Ollama owns port 11434 by
+   default, and `start.py` sent the server's stderr to DEVNULL — so the only
+   symptom was a bare "Timeout: AI server did not start." The log is now kept
+   in `llama-server.log` and its last lines are printed on a timeout.
+
+### Grading
+
+Gold hand-written answer: 53/53. Deliberately broken answer: 19 checks fire.
+Both directions matter — a check that never fires reads exactly like a pass.
+
+First model run scored 48/52, but **three of the four failures were the
+grader's**: an unused `import train_test_split` counted as a re-split;
+`\bpipe\w*` never matches `mlp_pipe` (no word boundary after `_`); and the
+probe demanded a variable literally named `pipe` when the block legitimately
+built two. A fourth check gave a false PASS — `[0][1]` matched
+`predict_proba(...)[0][1]`. That is four grader defects in one round, on top of
+three last round. **A grader earns trust the same way a prompt does: by being
+tested against a known-good and a known-bad answer before its numbers are
+quoted.**
+
+
+### The patch that made it worse, and what it proved
+
+Fixing the starter-code repetition worked. The same round's score then fell
+from 51/53 to **36/53**, because block 3 reloaded the CSV, re-split on all 16
+columns and built a ColumnTransformer nobody asked for.
+
+The cause was a rule I had written two hours earlier:
+
+    START A NEW NOTEBOOK - only when the message actually sets the data up:
+    it quotes a dataset description, gives starter code, names a CSV ...
+
+Q3 of the real paper opens with a **"Context:" paragraph** about the dataset
+(*"the positive class constitutes only ~11.5% of records ... dialing
+non-converting leads wastes limited operational budget"*). That is background
+for the question. My own discriminator read it as "quotes a dataset
+description" and told the model to start over.
+
+**The typo bank settled it without a single extra model call.** T3 is the same
+question typed in a hurry, and the student does not retype the Context
+paragraph — so T3 lacks exactly the text that triggered the rebuild. Same
+prompt, same session: CLEAN 36/53, **TYPO 51/53**. A one-sample regression
+would have been arguable; two banks differing in precisely the suspect
+sentence made it a measurement.
+
+The discriminator now says the QUESTION NUMBER decides and overrides
+everything: anything above 1 is a continuation however much prose it carries.
+A background paragraph is explicitly called out as not-setup, quoting the real
+Context text. Two supporting patches went in with it: "the import list is a
+MENU, not a template" (the model had transcribed all 16 import lines verbatim,
+including LinearRegression and r2_score for a confusion-matrix answer), and a
+gate on the ColumnTransformer recipe, which must not be reached for when X is
+already built from a chosen numeric list.
+
+### Grader defects this round: six
+
+Three static (an unused `import train_test_split` read as a re-split;
+a word-boundary regex that never matched `mlp_pipe`, since an underscore is itself a word character; a probe demanding a variable literally
+named `pipe`), one false PASS (`[0][1]` matching `predict_proba(...)[0][1]`),
+and two more found only because a 51/53 run had two failures worth reading:
+`fit_transform(X_train[num_cols])` rejected for the subscript, and - the
+stubborn one - prose reading *"reduces False Positives (FP) and increases False
+Negatives (FN)"* flagged as wrong, because "increases" sits nine characters
+from "False Positives".
+
+That last check has now been rewritten so the increase verb must attach
+DIRECTLY to false positives, and it ships with `_selftest_fp()`: three correct
+sentences that must pass and five wrong ones that must fail. **A check subtle
+enough to get wrong twice is subtle enough to need its own unit test.**
+
+### The Notes fence, and a grader that turned one slip into thirteen
+
+With the Context fix in, the rebuild stopped — and the score read 40/53, because
+a SyntaxError killed the script and every probe check cascaded off it. The
+cause was one line:
+
+    ```
+    Notes: The scaler was fitted only on X_train to prevent data leakage.
+    ```
+
+A Notes sentence wrapped in a bare fence. The grader treated every fenced
+section as Python, concatenated that sentence into the notebook, and the whole
+execution half of the report collapsed. Re-graded with an executor that skips
+fences which do not parse as Python, the same two runs score **53/55** —
+so the real defect was worth two checks, not fifteen.
+
+Both corrections stand:
+
+  * The GRADER now executes only fences that parse, and reports the slip
+    through two checks of its own ("one fenced code block per answer",
+    "nothing but Python inside a fence"). A formatting slip should cost the
+    marks it is worth and no more, or the report stops describing the answer.
+  * The PROMPT now shows the exact shape of a reply and tells it to count the
+    backticks: two ``` lines in the whole response, Notes bare on the line
+    after the closing fence. The rule against fenced Notes already existed in
+    two places and nothing contradicted it — but the Parts 3-4 recipes added
+    several "say in Notes that ..." instructions, so Notes are emitted far more
+    often now and a rung-1 rule was no longer enough.
+
+It appeared in BOTH modes in the same session, which is what makes it
+systematic rather than noise under rule 4.
+
+### Two more self-inflicted defects, both from the same reflex
+
+Patching the fenced-Notes problem, I wrote a literal answer TEMPLATE into
+RESPONSE FORMAT — an opening fence, placeholder code, a closing fence. The next
+run ended every answer with three closing fences in a row and scored 39/55.
+The prompt now held two complete literal fence pairs instead of one, and the
+model mirrored the extra pair. The shape is now described in five numbered
+steps with no new literal fences in the prompt at all.
+
+The same run produced `NameError: name 'pipe' is not defined`. The cause was
+the CANONICAL NAMES list I had introduced a few hours earlier:
+
+      logreg, dtree, rf, knn, mlp     the fitted models
+      pipe                            a Pipeline object
+
+Listing `pipe` beside `mlp` and `rf` said, in effect, "this one also already
+exists". It does not — nothing before Q3 builds a Pipeline — so the model
+called `pipe.predict(new_client)` without ever writing
+`pipe = Pipeline([...])`. The contract is now split in two, and the split is
+the point:
+
+  * BUILT BY AN EARLIER BLOCK — assume these exist (df, X, y, the split,
+    scaler, X_train_s/X_test_s, logreg/rf/mlp, cm)
+  * BUILT BY THE BLOCK IN FRONT OF YOU — create before use
+    (pipe_rf, pipe_mlp, importance, cm_custom, the y_pred_* lines)
+
+A contract that lists names without saying WHO CREATES THEM is not a contract;
+it is a list of things the model may assume into existence.
+
+### Running score, clean mode, one sample each
+
+    grader v1, first prompt                    51/53   (after fixing 4 grader defects)
+    + starter-code and ravel escalations       36/53   Context paragraph -> full rebuild
+    + Context / question-number fix            53/55   (regraded; rebuild gone)
+    + literal answer template                  39/55   stray fences + `pipe` NameError
+    + template rewritten, contract split       see below
+
+Typo mode over the same period: 53/53, then 53/55 twice — it was never the
+problem, because the student retyping a question does not reproduce the
+Context paragraph or invite the formatting drift.
+
+The honest lesson is rule 4 turned on myself: **three of my five patches this
+round made the score worse before they made it better, and every one was
+caught only by re-running.** A prompt edit is a change to a program whose
+behaviour you cannot predict by reading it.
+
+### Closed: 56/56 both modes
+
+    CLEAN (paper as printed)   56/56
+    TYPO  (as actually typed)  56/56
+
+Both saved runs re-grade to 56/56 offline. The three blocks now emit exactly
+one fenced code block each, no block rebuilds what an earlier one built, and
+every pipeline is fitted on raw named features. Timings from the final run:
+
+    block 1  398 s   (21k-token prefill, paid once per session)
+    block 2  128 s
+    block 3  252 s
+
+The grader ships with a gold answer (56/56) and a deliberately broken one
+(12 checks fire, naming the double-scaled pipeline by its missing feature
+names and printing the wrong confusion matrix it produced), plus
+`_selftest_fp()` for the one check subtle enough to have been wrong twice.
+
+### Deployed
+
+NOT YET — the pendrive was not connected during this round. Files to sync when
+it is: `start.py`, `dataset_scan.py`, `ui/index.html`,
+`courses/da-python/prompt.md`, `course.json`, `models.json`, `data/bank.csv`,
+`DEPLOY_README.txt`.
+
+### Prompt size
+
+19.4k tokens, up from 14.3k. Parts 1-2 (preprocessing + EDA) are 33% of it and
+the CT-2 paper touches none of them; they were KEPT deliberately, because a
+final exam can still cover them and the cost is a one-time prefill that now
+runs in the background on page load. Revisit only if a future paper makes
+Parts 1-2 genuinely dead.

@@ -24,10 +24,13 @@ start.py                 generic launcher: python start.py <course-id>
                          serves /api/config, /api/datasets, /api/scan
 dataset_scan.py          stdlib CSV scanner -> compact schema block appended to
                          the END of the system prompt (prefix-cache friendly).
-                         Reads EVERY row (costs no context) but emits <=250
+                         Reads EVERY row (costs no context) but emits <=500
                          tokens. Exists because the model cannot see the file:
                          .map({'Male':0}) on a file holding MALE silently NaN-s
                          the column, and hand-typed one-hot names KeyError.
+                         Also emits the DETECTED DELIMITER in its read_csv
+                         hint — bank.csv is ';'-separated and reading it as CSV
+                         yields one column and kills every task.
 models.json              model registry: priority order, ctx, extra flags
 courses/<id>/
     course.json          name, disguise title, tagline, temp, max_tokens,
@@ -36,7 +39,13 @@ courses/<id>/
     evals/questions.md   eval bank(s) — format: ## Q<n> headings
     evals/runs/          timestamped answer logs from eval/run_eval.py
     evals/findings.md    what failed → what patch → did it hold
-ui/index.html            single generic chat UI; fetches /api/config at load
+ui/index.html            single generic chat UI; fetches /api/config at load.
+                         Remembers the Dataset box in localStorage (the exam
+                         workflow is one question block per NEW TAB, and a tab
+                         used to start with no schema), and WARMS THE MODEL on
+                         load with a 1-token request so the ~21k-token prefill
+                         happens while the student reads the paper instead of
+                         in front of question 1.
 ui/powerbi.html          special-mode UI (live .pbix schema, {MODEL_CONTEXT})
 start_powerbi.py         special launcher for the Power BI bridge
 eval/run_eval.py         runs a bank against the local model, logs answers
@@ -45,6 +54,18 @@ eval/grade_class_test.py EXECUTES an answer to the REAL Class Test paper and
                          CSV. Bank: courses/da-python/evals/class_test_1.md,
                          a real paper rather than a synthetic one (diamonds,
                          REGRESSION target, no missing values).
+eval/grade_bank_ct2.py   The THIRD real paper, and the first from the NEW
+                         Sept-2026 syllabus (Parts 3-4: ML + DL). bank.csv,
+                         SEMICOLON-delimited, target ~88.5/11.5 imbalanced,
+                         and the paper SUPPLIES STARTER CODE. Its defining
+                         feature: it sends each question block as a SEPARATE
+                         chat with NO history, because that is how the student
+                         sits it (one block per new tab). Then concatenates the
+                         three answers and executes them as one notebook, so a
+                         rebuild or a renamed variable is a real traceback.
+                         Bank: courses/da-python/evals/class_test_3_bank.md
+                         Truth: eval/ref_bank_ct2.py (regenerates the key)
+                         Port override: LABRAT_AI_PORT.
 eval/grade_penguins_ct.py  The SECOND real paper (penguins, CLASSIFICATION
                          target, real NaNs, derived feature). Runs BOTH the
                          one-shot and the task-by-task flow, then appends a
@@ -126,6 +147,62 @@ months of eval rounds:
    paste a printed paper. Any workflow that only works when the whole paper
    arrives in one message will not survive the exam hall — the prompt must
    handle follow-up turns (continue, don't re-derive; always repeat imports).
+15. **THE SYLLABUS CHANGES UNDER YOU, AND A STALE BAN IS WORSE THAN A GAP.**
+   Sept 2026 the course moved to Parts 3-4 (ML + DL). The prompt still said
+   *"sklearn is allowed ONLY for MinMaxScaler, StandardScaler,
+   train_test_split"*, *"the labs stop at 'ready for a model'"*, and
+   *"never import SimpleImputer / OneHotEncoder / ColumnTransformer"* — i.e.
+   it explicitly forbade the exact APIs the new paper is built on. An omission
+   makes the model improvise; a ban makes it refuse. When new material lands,
+   FIRST grep the prompt for every API that material teaches and fix the
+   contradictions, THEN add recipes. This is rule 7 at syllabus scale.
+16. **A FRESH CHAT IS NOT A FRESH NOTEBOOK.** The student now opens a new tab
+   per question block, so Q2 and Q3 arrive with zero history — no dataset
+   description, no starter code, no memory of Q1. The model cannot recover
+   that from context, only from the question's own wording ("Q3", "your
+   trained model"). What makes it safe is a **canonical variable-name
+   contract** (`X_train_s`, `mlp`, `rf`, `cm`, `pipe`) published in the
+   prompt: the block that creates the name and the block that consumes it are
+   both written by the same prompt, so they agree by construction. Pair it
+   with "re-derive the cheap (predictions), never the expensive (read_csv,
+   split, fit)" and a `# continues the notebook — uses: ...` header that makes
+   a mismatch visible before the student runs the cell.
+17. **Injection has to cover the DELIMITER, not just the column names.**
+   `bank.csv` is semicolon-separated; `pd.read_csv('bank.csv')` returns ONE
+   column named `age;"job";"marital";...` and every later task dies on a
+   KeyError. The scanner sniffed the delimiter correctly for its own parsing
+   and then emitted a comma-shaped `read_csv` hint anyway. Whatever the
+   scanner knows about HOW TO LOAD the file has to reach the prompt too.
+18. **A grader must be tested in both directions.** Score the hand-written
+   gold answer (catches false positives — three slipped through in July) AND a
+   deliberately broken one (catches false negatives — a check that never fires
+   is worse than no check, because it reads as a pass).
+19. **Check what else is on the port.** `llama-server` failed to bind because
+   Ollama squats on 11434 by default. `start.py` sends its stderr to DEVNULL,
+   so on such a machine the launcher would look like it started and the UI
+   would just never connect. Eval scripts take `LABRAT_AI_PORT`.
+20. **A discriminator rule will fire on the wrong text.** The rule "start a new
+   notebook when the message quotes a dataset description" was written to catch
+   Q1. It fired on Q3, whose printed form opens with a *"Context:"* paragraph
+   about class imbalance and call budgets — so the model dutifully reloaded the
+   CSV and rebuilt everything, and the score fell 51 -> 36. When a rule keys off
+   "does the text mention X", check it against every question in the bank, not
+   just the one it was written for. Prefer a signal the student cannot
+   accidentally trip: **the question NUMBER**, which is unambiguous and
+   overrides all the prose heuristics.
+21. **Two banks that differ in one sentence beat two runs of one bank.** The
+   typo bank scored 51/53 in the same session the clean bank scored 36/53, and
+   the only relevant difference is that a student retyping Q3 in a hurry does
+   not copy the Context paragraph. That turned "maybe sampling noise" into a
+   located cause without a single extra model call. Keep the rushed-typing
+   variant of every paper.
+22. **A subtle check needs a unit test.** The "prose gets the False-Positive
+   direction right" check was wrong twice: the CORRECT answer is phrased
+   *"reduces False Positives and increases False Negatives"*, which a proximity
+   match flags, and *"Increasing the threshold"* trips a clause match. It now
+   ships with `_selftest_fp()` — three sentences that must pass, five that must
+   fail. Six grader defects this round and three last round: **grader code is
+   code, and it earns trust the same way the prompt does.**
 
 ## Models (July 2026 state)
 

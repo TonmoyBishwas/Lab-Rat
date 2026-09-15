@@ -74,6 +74,7 @@ def _scan(path, max_distinct):
             dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
         except csv.Error:
             dialect = csv.excel
+        sep = getattr(dialect, "delimiter", ",")
         reader = csv.reader(f, dialect)
         try:
             header = next(reader)
@@ -139,12 +140,13 @@ def _scan(path, max_distinct):
         "n_rows": n_rows,
         "n_cols": n,
         "truncated": truncated,
+        "sep": sep,
         "columns": cols,
-        "text": render(os.path.basename(path), n_rows, n, cols, truncated),
+        "text": render(os.path.basename(path), n_rows, n, cols, truncated, sep),
     }
 
 
-def render(name, n_rows, n_cols, cols, truncated=False):
+def render(name, n_rows, n_cols, cols, truncated=False, sep=","):
     """Format the block that gets appended to the system prompt."""
     w = max((len(c["name"]) for c in cols), default=10)
     w = min(w, 28)
@@ -169,9 +171,22 @@ def render(name, n_rows, n_cols, cols, truncated=False):
         elif c["kind"] in ("int", "float"):
             detail = f"range {_fmt(c['min'])} .. {_fmt(c['max'])}"
         lines.append(f"  {c['name'].ljust(w)}  {kind:6s}  {miss:>12s}   {detail}")
+    # bank.csv is semicolon-delimited. Reading it WITHOUT sep=';' silently
+    # yields ONE column named 'age;"job";"marital";...' - every later task then
+    # dies on a KeyError the student cannot explain. Emit the real delimiter.
+    esc = "\\t" if sep == "\t" else sep
+    lines.append("")
+    if sep == ",":
+        lines.append(f"Load it with:  df = pd.read_csv('{name}')")
+    else:
+        lines += [
+            f"Load it with:  df = pd.read_csv('{name}', sep='{esc}')",
+            f"THIS FILE IS '{esc}'-DELIMITED, NOT COMMA-DELIMITED. The sep="
+            " argument is REQUIRED.",
+            "Without it pandas returns ONE column whose name is the whole header",
+            "line, and every task after the load fails on a KeyError.",
+        ]
     lines += [
-        "",
-        f"Load it with:  df = pd.read_csv('{name}')",
         "Use these names verbatim. If the question names a column that is not",
         "in this list, use the closest match here and say so in one line.",
         "Never invent a category value or a one-hot column name - read them",

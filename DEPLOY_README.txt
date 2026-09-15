@@ -1,7 +1,9 @@
 ================================================================
   LAB RAT AI  -  Data Analytics Lab (Python)
   Offline. No admin. No internet.
-  Tuned against TWO real Class Test papers (diamonds + penguins).
+  Tuned against THREE real Class Test papers:
+    CT-1  diamonds, penguins   (Parts 1-2: preprocessing + EDA)
+    CT-2  bank.csv             (Parts 3-4: machine learning + deep learning)
 ================================================================
 
 
@@ -34,7 +36,17 @@ DO THIS BEFORE THE PAPER IS HANDED OUT
          penguins.csv                        <- a bare name works
          C:\Users\student\Desktop\data.csv   <- a full path works too
 
-     It should turn green and show something like "344 rows x 7 cols".
+     It should turn green and show something like "4521 rows x 17 cols".
+
+     IT NOW REMEMBERS. Once set, the box survives the "+" new-chat button AND
+     a brand-new browser tab. Set it once at the start of the exam and forget
+     it. (If you ever reopen the page and the box looks empty, retype the
+     name - it takes two seconds and it is worth checking.)
+
+     IT ALSO DETECTS THE SEPARATOR. bank.csv is semicolon-separated, so the
+     correct load is pd.read_csv('bank.csv', sep=';'). Without sep=';' pandas
+     returns ONE column and every single task fails. The box reads the real
+     separator off the file and tells the AI, so you cannot get this wrong.
 
      WHY THIS MATTERS MORE THAN ANYTHING ELSE:
      the AI cannot see the file. Without this step it GUESSES what is
@@ -47,29 +59,56 @@ DO THIS BEFORE THE PAPER IS HANDED OUT
      If the exam hands you a file you have not seen before, set this box
      before you type a single question.
 
-  STEP 2 - WARM IT UP.  Type "hi" and send it.
+  STEP 2 - LET IT WARM UP.  It now does this by itself.
 
-     The first message of a session is slow because the instructions are
-     processed once. After that they are cached and everything is much
-     faster. Do not let question 1 of the exam be the first thing you ask.
+     The instructions are long and get processed ONCE per session. That
+     takes a few minutes, and it used to happen in front of your first real
+     question. It no longer does: the moment the page loads (and again
+     whenever you change the Dataset box) it quietly warms itself up in the
+     background, and the Dataset box shows "... ready" when it is done.
+
+     So: OPEN IT EARLY. Launch it and set the Dataset box while the paper is
+     still being handed out, and by the time you type Q1 the slow part is
+     already paid. Everything after that is fast, including every new tab -
+     the processed instructions stay cached, so a new chat costs almost
+     nothing.
+
+     You can still type "hi" first if you want to see it respond. You no
+     longer have to.
 
 
 HOW TO ASK
 ----------
 
-  DO IT ONE TASK AT A TIME. This is now the recommended way, and it is
-  what scored best when measured against a real paper:
+  ONE QUESTION BLOCK PER CHAT. Paste ALL the parts of one question together
+  - Q1 (a), (b) and (c) in a single message - then press "+" for a brand-new
+  chat and paste Q2, then "+" again for Q3.
 
-      task by task   30/31 checks, a usable answer every ~2 minutes
-      whole paper    23/31 checks, nothing at all for ~8 minutes
+  Why a new chat each time: the answer stays short and fast because the AI
+  is not re-reading the whole conversation. It is tuned to understand that an
+  empty chat does NOT mean an empty notebook - a block numbered Q2 or Q3, or
+  one that says "your trained model", tells it to CONTINUE from what the
+  earlier cells built rather than start over. That "start over" behaviour is
+  what wrecked the last Class Test.
 
-  Type Task 1, paste the answer into your notebook and run it, then type
-  Task 2, and so on. Each answer is short, carries its own imports, and
-  continues from the variables the previous ones created instead of
-  rebuilding everything.
+  IF THE PAPER GIVES STARTER CODE, RUN IT YOURSELF FIRST. Copy the starter
+  block straight from the paper into your notebook and run it. Do not ask
+  the AI to write it - it already knows that code exists and will start from
+  the first thing the starter did NOT do.
 
-  Mention the dataset only in your first message - the Dataset box keeps
-  the real column names available for every later question.
+  Give the dataset description only with Q1. From Q2 on, just paste the
+  question - the Dataset box keeps the real column names and the real
+  separator available in every new chat.
+
+  IT ALL HAS TO LAND IN ONE NOTEBOOK, IN ORDER. Paste Q1's answer, run it,
+  then Q2's answer below it, run it, then Q3's. The later blocks deliberately
+  do not rebuild the earlier ones - they use the variables those cells left
+  behind. If you skip a block, the next one will not run.
+
+  EACH CONTINUATION BLOCK STARTS WITH A LINE LIKE:
+      # continues the notebook - uses: mlp, X_test_s, y_test
+  Read it. If one of those names is not in your notebook, you skipped
+  something - fix that before running the cell.
 
   YOU DO NOT NEED TO SPELL COLUMN NAMES CORRECTLY, or at all. Once the
   Dataset box is set, "impute the numeric columns using the median of
@@ -77,7 +116,7 @@ HOW TO ASK
   and corrects your typing. Less typing, fewer mistakes.
 
   (Pasting the whole paper in one message still works if you prefer it,
-  but it is slower to first answer and scored lower.)
+  but it is slower to first answer and has always scored lower.)
 
   If a reply takes too long or goes wrong, press STOP - the Send button
   becomes a red Stop button while it is writing. The "+" new-chat button
@@ -117,6 +156,31 @@ CHECK THESE BEFORE YOU SUBMIT
      no marks. Each task should print a shape, a count, a head() or a
      computed value.
 
+  FOR A MACHINE-LEARNING / DEEP-LEARNING PAPER (CT-2 shape), also check:
+
+  A. DID A PIPELINE GET PRE-SCALED DATA? A Pipeline that contains a
+     StandardScaler must be handed the RAW frame:
+         pipe.fit(X_train, y_train)          <- correct
+         pipe.fit(X_train_s, y_train)        <- WRONG, scales twice
+     Same for cross_val_score(pipe, X, y) - raw X, never X_train_s. It runs
+     either way and quietly gives a worse model, so nothing warns you.
+
+  B. ARE THE HYPER-PARAMETERS THE ONES THE PAPER NAMED? Read them back
+     one by one: hidden_layer_sizes=(32, 16), activation='relu',
+     solver='adam', max_iter=500, random_state=42, n_estimators=100.
+     Markers check these individually.
+
+  C. .loss_ OR .loss_curve_ ? .loss_ is ONE final number. .loss_curve_ is
+     the list you plot. Asking for one and printing the other loses the mark.
+
+  D. "Stochastic Optimizer: Maximum iterations reached" IS NOT AN ERROR.
+     The cell ran, the results count. Do not change max_iter to silence it.
+
+  E. DID THE THRESHOLD QUESTION PRINT BOTH COUNTS? Raising the threshold
+     above 0.5 must make False Positives go DOWN and False Negatives go UP.
+     If your printed numbers show the opposite, something is wrong with the
+     matrix you compared against.
+
   6. LOOK AT THE FIRST COLUMN NAME IN df.info(). If it is "Unnamed: 0"
      (or "index"), the CSV was saved with its row numbers. Add this line
      after read_csv and re-run:
@@ -139,9 +203,9 @@ IF IT FEELS SLOW ON THE LAB PC
 
   Try 4, 6 and 8; keep whichever feels quickest.
 
-  The FIRST message of a session is always the slow one. Every message
-  after it is much faster - which is exactly why you warm it up with
-  "hi" before the paper arrives.
+  The slow part is the ONE-TIME warm-up, not your questions. It now runs by
+  itself as soon as the page opens, so the fix for "it feels slow" is simply
+  to open the app earlier - not to wait until the paper is in your hand.
 
 
 IF THE .BAT FLASHES AND DISAPPEARS
@@ -159,8 +223,11 @@ BEFORE EXAM DAY - AT HOME, WITH INTERNET
 
       pip install numpy pandas matplotlib seaborn scikit-learn
 
-  That is all this exam needs. The paper supplies its own CSV, so you do
-  not depend on seaborn downloading anything.
+  That is all this exam needs - the CT-2 syllabus (machine learning and
+  deep learning) is entirely scikit-learn. There is NO tensorflow, keras or
+  pytorch anywhere in it: the course's neural network is
+  sklearn.neural_network.MLPClassifier. The paper supplies its own CSV, so
+  you do not depend on seaborn downloading anything.
 
   If you want seaborn's built-in datasets to work offline too (in case a
   question uses titanic or tips instead), also run:
