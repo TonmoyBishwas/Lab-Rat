@@ -152,7 +152,11 @@ def load_bank():
     txt = open(BANK, encoding="utf-8").read()
     clean = re.findall(r"^## (Q\d)\n(.*?)(?=^## Q\d|\n---\n|\Z)", txt, re.S | re.M)
     typo = re.findall(r"^## (T\d)\n(.*?)(?=^## T\d|\n---\n|\Z)", txt, re.S | re.M)
-    return [b.strip() for _, b in clean], [b.strip() for _, b in typo]
+    # Keep the printed question label - see the note in grade_titanic_mldl.py.
+    # The typo bank is the student's own typing, where the label is lowercase
+    # and often the only thing tying a block to the previous one.
+    return ([f"{lbl}. {b.strip()}" for lbl, b in clean],
+            [f"{lbl.lower().replace('t', 'q')}. {b.strip()}" for lbl, b in typo])
 
 
 def sys_prompt():

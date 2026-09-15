@@ -136,6 +136,17 @@ CHECK THESE BEFORE YOU SUBMIT
 
   1. RUN EVERY CELL, in order. The answer is worth only what executes.
 
+     "NameError: name 'X' is not defined" IS A FIVE-SECOND FIX, NOT A DISASTER.
+     It means one import line was left out, or one variable came from a cell
+     you have not run yet. Read the name it complains about:
+        - a class name (OneHotEncoder, Pipeline, StandardScaler) -> add the
+          import at the top of that cell and re-run it;
+        - a data name (X_train_s, mlp, cm) -> you skipped an earlier block, or
+          ran them out of order. Run them top to bottom.
+     This is the single most likely thing to go wrong, and it costs you nothing
+     if you notice it. Which is why you run every cell as you paste it, rather
+     than pasting all three answers and running at the end.
+
   2. DID ANY COLUMN GO BLANK? After a label-encoding step, look at that
      column. If it is all NaN, the mapping did not match the real values.
      The code now prints "unmapped: 0" after each mapping - if that

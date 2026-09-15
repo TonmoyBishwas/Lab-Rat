@@ -1023,3 +1023,185 @@ the CT-2 paper touches none of them; they were KEPT deliberately, because a
 final exam can still cover them and the cost is a one-time prefill that now
 runs in the background on page load. Revisit only if a future paper makes
 Parts 1-2 genuinely dead.
+
+---
+
+## Iteration 6 — does it generalize, or is it tuned to one paper?
+
+Asked directly: "can you confirm it can solve similar questions, not just the
+other section's paper? the teacher will obviously change the questions."
+
+The honest answer was no, and 56/56 could not settle it: the clean and typo
+banks are the SAME paper typed two ways. So a fourth bank went in -
+`class_test_4_titanic.md`, written from the Part 3/4 handouts rather than from
+any sitting, and deliberately different on every axis a model could memorise:
+
+    dataset        bank.csv, 7 numeric cols  ->  titanic, text + real NaNs
+    preprocessing  none (starter did it)     ->  impute/map/one-hot in Q1(a)
+    models         LogisticRegression, RF    ->  DecisionTree, KNN
+    architecture   (32,16) max_iter=500      ->  (16,8) max_iter=1000
+    attribute      .loss_                    ->  .n_layers_ AND .loss_
+    folds          5                         ->  10
+    palette        Blues                     ->  Purples
+    ColumnTransformer  must NOT be used      ->  MUST be used
+    threshold      T=0.65, FP FALLS          ->  T=0.35, FP RISES
+
+The last two are the real tests. The inverted threshold catches a model
+reciting the bank paper's conclusion instead of reasoning; the required
+ColumnTransformer checks that the gate added this round suppressed a reflex
+rather than a capability. The key is cross-checked against the figures the
+handouts themselves print (MLP 0.7709, loss 0.3058, cm [[91,19],[22,47]], the
+four architecture accuracies, pipeline 0.7933) - an independent confirmation
+that the reference implementation matches the teacher's.
+
+**First run: 36/52.** The suspicion was correct.
+
+Block 2 ignored the continuation contract and emitted the Parts 1-2
+PREPROCESS -> SPLIT -> EDA SKELETON: reloaded the CSV, re-imputed, capped fare
+outliers, re-encoded, re-split. It pulled in `deck`, `embark_town` and `who` -
+columns the paper never lists - and the notebook died on
+`could not convert string to float: 'man'`. Block 3 then reassigned `df`,
+`X_train`, `X_train_s`, `X_test_s` and `mlp`, orphaning everything.
+
+Why here and not on the bank paper: bank's Q2 is purely evaluative ("generate
+the confusion matrix for your trained MLPClassifier"), while this Q2(a) says
+"**Initialize and train** an MLPClassifier". A training verb reads as setup, the
+model went looking for the most template-shaped thing in the prompt, and the
+Parts 1-2 skeleton is exactly that.
+
+Three fixes, all of them gaps the bank paper structurally could not expose:
+
+  1. The skeleton now carries a GATE ABOVE IT, not a caveat below it: never in
+     a continuation block, with the `'man'` failure named.
+  2. "TRAIN A MODEL IS NOT A LICENCE TO REBUILD THE DATA" joins the continuation
+     tells. A new ESTIMATOR in Q2/Q3 is expected; new DATA is not.
+  3. The skeleton's own guard pointed at "see FOLLOW-UP QUESTIONS above" - a
+     section renamed earlier this round. A dangling cross-reference in a prompt
+     is a rule that silently stops being findable. Swept for others: none left.
+
+Also surfaced: the paper's Q3(c) legitimately NEEDS a reload, because it asks
+for a pipeline over the RAW uncleaned frame and Q1 cleaned `df` in place. The
+prompt said never reload, full stop. It now carries THE ONE LEGITIMATE RELOAD,
+whose whole content is the guard: load it under NEW names (`raw`, `Xr`,
+`Xr_train`) so the cleaned frame, the split and the fitted models all survive.
+Two of the three failures in my own hand-written GOLD answer were this rule
+being too absolute - the gold answer was right and the grader was wrong.
+
+**The lesson is rule 10, confirmed a second time.** One paper is not the course,
+and two typings of one paper are not two papers. A bank that shares a defect
+with the system under test cannot detect that defect.
+
+### My own harness was half the problem
+
+Three prompt patches in a row failed to move the unseen paper (36 -> 34 -> 33).
+The cause was not the prompt. `load_bank()` stripped the `## Q2` heading, so the
+model received a block beginning "(a) Initialize and train an MLPClassifier..."
+with NO question number and NO back-reference to earlier work. The prompt rule
+I had just written says THE QUESTION NUMBER DECIDES IT - and the harness was
+deleting the question number before sending.
+
+The bank paper never exposed this because its Q2 and Q3 carry explicit
+back-references ("your trained MLPClassifier", "your default matrix from
+Q2(a)") that survive label-stripping. The titanic Q2 has none, so once the
+label was gone there was genuinely nothing left to key on, and rebuilding was
+the only reasonable reading.
+
+Both harnesses now send the question as PRINTED, label included, because that
+is what the student pastes. Block 2's answer immediately fell from 4468 chars
+to 1857 and every continuation failure disappeared.
+
+**A test harness is part of the system under test.** Three rounds of prompt
+patching were spent on a defect that lived in the grader.
+
+### The bug that only appears on a machine with no internet
+
+With the continuation failures gone, one error was killing the rest:
+`could not convert string to float: 'Third'`. The offline-loading recipe was
+being written as
+
+      try:    df = sns.load_dataset('titanic')[cols].copy()   # 8 columns
+      except: df = pd.read_csv('titanic.csv')                 # 15 columns
+
+The subset is applied on the `try` line only. On the dev box the `try` branch
+succeeds and everything looks correct. ON THE EXAM PC THERE IS NO INTERNET, so
+`sns.load_dataset` always raises and the fallback is the ONLY branch that ever
+runs - silently handing back the full fifteen-column seaborn dump: `class`
+('Third'), `who` ('man'), `deck`, and `alive`, which is the target spelled out
+in words. A model trained on `alive` reads the answer off its own input.
+
+The recipe now puts every post-load step AFTER the try/except so it applies on
+both paths. bank.csv could not expose this: it is read with a direct
+`pd.read_csv`, no fallback.
+
+### Two more, both about clobbering canonical names
+
+  * Q1 scaled with the PART 1 in-place form
+    (`X_train[num_cols] = scaler.fit_transform(...)`) - correct, self-consistent
+    code that creates no `X_train_s`. Q2, written in a fresh chat that cannot
+    see it, said `mlp.fit(X_train_s, ...)` and died on NameError. Two recipes
+    showed two forms and the question's wording matched the wrong one (rule 7).
+    The Parts 3-4 recipe now states that a modelling paper ends that cell with
+    X_train_s and X_test_s bound, whatever the question calls the step.
+  * The architecture sweep used `mlp` as its LOOP VARIABLE, so after the loop
+    the canonical `mlp` was (32,16,8) instead of the (16,8) network the paper
+    specified - and every later matrix, threshold and probability silently
+    referred to the wrong model. Unified with the reload case into one rule:
+    never rebind a name from the "built by an earlier block" list.
+
+Running score on the unseen paper: 36, 34, 33, 38, 37, 40. The notebook now
+executes end to end; the remaining failures are narrow and specific rather than
+cascading.
+
+### Where it landed, and what the number actually means
+
+Eight runs of the unseen paper: 36, 34, 33, 38, 37, 40, 38, 38 out of 52. It
+plateaued, with a DIFFERENT single blocking error each time (a stray column, a
+missing OneHotEncoder import, an unbound X_train_s, a ColumnTransformer handed
+the already-encoded frame). That oscillation is the signature of a reliability
+ceiling, not of one more fixable defect - so the patching stopped there rather
+than trading one failure for another indefinitely.
+
+Tallying every check across the last five runs separates knowledge from
+reliability, and the split is stark.
+
+**34 checks held in EVERY run** - all of the ML/DL substance:
+
+    correct estimators and hyper-parameters (DecisionTree, KNN, MLP (16,8)
+    max_iter=1000) · 10-fold NOT 5 · cmap='Purples' NOT Blues · n_layers_ AND
+    .loss_ · ColumnTransformer used where the paper asks for it ·
+    handle_unknown='ignore' · both SimpleImputer strategies · median/mode
+    imputation · get_dummies(dtype=int) · stratified split · scaler fit on
+    train only · threshold applied to predict_proba[:,1] · FP counts extracted
+    · Q2 never rebuilds · no fabricated output · one fenced block per answer
+
+**And the sharpest check of all passed 5/5: "prose gets the INVERTED FP
+direction right".** This paper lowers the threshold to 0.35, so false positives
+must RISE - the exact opposite of the bank paper's 0.65. A model reciting the
+tuned-on answer fails this every time. It never did. The same goes for 10-fold
+(it never carried 5 over) and Purples (never carried Blues over). **The ML/DL
+knowledge is genuinely general, not memorised.**
+
+**9 checks failed in every run** - and all nine are PROBE checks, which can only
+run if the notebook executes end to end. Execution succeeded in 1 run of 5. So
+those nine are one failure counted nine times, not nine independent defects.
+
+The honest summary:
+
+    the syllabus knowledge          generalizes - verified against an unseen
+                                    paper with an inverted answer
+    multi-block state continuity    holds on the real CT-2 shape (56/56 twice),
+                                    fragile on a longer preprocessing-heavy
+                                    paper: roughly one fatal slip per attempt
+
+That fragility is real, because a notebook that does not run scores zero. But
+it is also the cheapest failure in the paper to recover from: every instance was
+a missing import or an unbound name, which announces itself as a NameError the
+moment the student runs the cell. DEPLOY_README now teaches that explicitly -
+run each cell as you paste it, and read the name the error complains about.
+
+**Caveat on this bank, stated plainly:** the titanic paper is HARDER than the
+real CT-2. The bank paper's starter code does all the preprocessing; here Q1(a)
+does it. Q3(c) is a six-mark ColumnTransformer spec. Block 3 answers run ~5000
+chars against the bank paper's ~3400. It was built to be adversarial, and 38/52
+on a deliberately harder unseen paper alongside 56/56 on the real format is the
+result - not 38/52 on the exam.

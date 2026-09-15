@@ -66,6 +66,19 @@ eval/grade_bank_ct2.py   The THIRD real paper, and the first from the NEW
                          Bank: courses/da-python/evals/class_test_3_bank.md
                          Truth: eval/ref_bank_ct2.py (regenerates the key)
                          Port override: LABRAT_AI_PORT.
+eval/grade_titanic_mldl.py  The GENERALIZATION bank — NOT a real sitting.
+                         Written from the Part 3/4 handouts to answer "is the
+                         prompt tuned to the bank paper or to the syllabus?".
+                         Differs from bank CT-2 on every memorisable axis:
+                         titanic (text + real NaNs), DecisionTree/KNN, (16,8),
+                         10-fold, Purples, an architecture sweep, a REQUIRED
+                         ColumnTransformer, and above all an INVERTED
+                         threshold (T=0.35, so false positives must RISE where
+                         the bank paper's 0.65 made them fall). Its key is
+                         cross-checked against the figures the handouts
+                         themselves print. Bank:
+                         courses/da-python/evals/class_test_4_titanic.md
+                         Truth: eval/ref_titanic_mldl.py
 eval/grade_penguins_ct.py  The SECOND real paper (penguins, CLASSIFICATION
                          target, real NaNs, derived feature). Runs BOTH the
                          one-shot and the task-by-task flow, then appends a
@@ -203,6 +216,33 @@ months of eval rounds:
    ships with `_selftest_fp()` — three sentences that must pass, five that must
    fail. Six grader defects this round and three last round: **grader code is
    code, and it earns trust the same way the prompt does.**
+
+23. **A TEST HARNESS IS PART OF THE SYSTEM UNDER TEST.** Three prompt patches
+   in a row failed to move an unseen paper (36 -> 34 -> 33) because
+   `load_bank()` stripped the `## Q2` heading before sending. The prompt rule
+   being debugged says "the question number decides whether this continues" -
+   and the harness was deleting the question number. Send the question exactly
+   as the student pastes it, label included. Suspect the harness when patches
+   stop working.
+24. **An offline fallback only fails on the machine that has no internet.**
+   `try: sns.load_dataset(X)[cols] / except: pd.read_csv(...)` applies the
+   subset on the try line only. On the dev box the try branch wins and it looks
+   right; on the EXAM PC the except branch is the ONLY one that ever runs, so
+   the subset silently vanishes and titanic's 15 columns - including `alive`,
+   the target in words - walk into X. Put every post-load step AFTER the
+   try/except. Test the branch the target machine will take.
+25. **Separate knowledge failures from reliability failures before reading a
+   score.** On the unseen paper 9 checks failed in every run - all of them
+   probe checks, which only run if the notebook executes. That is ONE failure
+   counted nine times. Meanwhile 34 checks held in every run, including the
+   inverted-threshold prose check that a memorising model cannot pass. Tally
+   per-check across runs; a single score hides which half is broken.
+26. **Build one adversarial bank per topic, not just real papers.** The titanic
+   ML/DL bank exists only to attack memorisation: same difficulty, different
+   dataset, different models, and an INVERTED answer (threshold 0.35, so false
+   positives rise where the tuned-on paper's 0.65 made them fall). It found
+   four real bugs the real paper structurally could not - including 24 above.
+   A bank that shares a blind spot with the prompt cannot detect it.
 
 ## Models (July 2026 state)
 
