@@ -1327,3 +1327,20 @@ defensible behaviour is how prompts rot (rule 4).
 
 Student-facing consequence, added to DEPLOY_README: run your own starter cell
 and check it executes. The AI cannot see the notebook.
+
+### Regression: the path the fix could have broken
+
+The alias rule only exists for lowercase starters, so the question that
+decides whether it ships is what it does to the NORMAL uppercase paper. Run
+after the run-3 prompt:
+
+    CLEAN (paper as printed)     56/56
+    TYPO  (as actually typed)    56/56
+    LOWER (student's capture)    55/56
+
+No regression. This run is the reason the alias line was moved out of the
+recipe and into prose: as executable recipe text it read
+`X, X_train, X_test = x, x_train, x_test`, and this model has transcribed
+recipe lines verbatim - which on a uppercase paper is a NameError on `x`.
+The round's own lesson, applied to itself: a fix tested only on the case it
+was written for is how the bug being fixed got in.
