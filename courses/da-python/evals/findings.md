@@ -1205,3 +1205,125 @@ does it. Q3(c) is a six-mark ColumnTransformer spec. Block 3 answers run ~5000
 chars against the bank paper's ~3400. It was built to be adversarial, and 38/52
 on a deliberately harder unseen paper alongside 56/56 on the real format is the
 result - not 38/52 on the exam.
+
+
+## Iteration 7 - the student's own capture (2026-09-16)
+
+FIRST DATA FROM OUTSIDE THE HARNESS. The student hand-typed the other
+section's paper into the real UI at exam speed, with their own spelling, in
+three separate tabs, and kept all six files (three prompts, three answers).
+No CSV, no dataset box - prompts only.
+
+### What it found that nine harness runs could not
+
+The paper prints `X = df[features].copy()`. They typed `x`. Block 1 followed
+their lowercase and was **numerically perfect**:
+
+    Logistic Regression accuracy: 0.8861878453038674   (ref 0.8862)
+    Random Forest accuracy:       0.8729281767955801   (ref 0.8729)
+    MLPClassifier accuracy:       0.8762430939226520   (ref 0.8762)
+    MLPClassifier final loss:     0.20337056143699792  (ref 0.2034)
+
+Block 2, a fresh chat that never saw block 1, fell back to canonical `X`:
+
+    NameError: name 'X_test_s' is not defined. Did you mean: 'x_test_s'?
+
+Regrade of the captured answers: **40/56**. Eleven of the sixteen failures are
+one cascade - every probe check needs the notebook to execute. Knowledge: fine.
+Reliability: fatal.
+
+The clean bank and the typo bank both feed the paper's PRINTED uppercase X, so
+the harness and the prompt agreed by construction and the contract could not
+fail. A contract that spans two contexts has to be tested with the two contexts
+DISAGREEING.
+
+### Second defect, independent of the first
+
+Q3(b) ended, verbatim:
+
+    wju os tjos sjoft crotoa; wjem,arlettogm ca[aogm ca;; nidget are stricl
+    limited?
+
+- a whole-hand-one-key-shifted "why is this shift critical when marketing call
+budgets are strictly limited?". The model answered the readable half and
+dropped the 2-mark why. The prompt's typo tolerance only ever covered COLUMN
+NAMES; real typing degrades much further, and it degrades worst at the end of
+the sentence - which is exactly where the reasoning word sits.
+
+### Third, cosmetic
+
+Block 2's Notes line read "...by comparing the custom threshold matrix
+(cm_custom) against the default matrix (cm)". Nothing in block 2 builds
+cm_custom - that is block 3's content leaking into block 2's prose. One
+occurrence, no marks at risk, NOT patched (rule 4: systematic only). Watch it.
+
+### Patches
+
+1. prompt.md, CANONICAL NAMES: "THE STARTER CODE MAY SPELL THEM DIFFERENTLY.
+   NORMALISE IT IN THE FIRST BLOCK." Block 1 aliases whatever was typed to the
+   canon on its first line - `X, X_train, X_test = x, x_train, x_test` - then
+   uses canon only. An alias, not a rebuild: no re-read, no re-split, no
+   re-fit, and the student's own names keep working. Explicitly silent when
+   the starter already uses `X`.
+2. prompt.md, scan-authority section: "A SUB-QUESTION MAY ARRIVE UNREADABLE.
+   ANSWER IT ANYWAY, NEVER SKIP IT." - reconstruct shifted-hand text from the
+   surrounding sentence, answer it, and say so in one Notes line.
+3. class_test_3_bank.md: `## L1-L3`, the capture verbatim, comments and all.
+4. grade_bank_ct2.py: `STARTER_LOWER` + a third mode `lower`; `grade()` and
+   `run_mode()` now take the starter, and `regrade` picks STARTER_LOWER for any
+   log whose name contains `-lower`.
+5. DEPLOY_README: type the starter's names exactly as printed, plus the
+   two-line rescue if you already typed them lowercase.
+
+### Runs
+
+| run | prompt state | lower score |
+|---|---|---|
+| captured | (pre-patch, student's own UI session) | 40/56 |
+| 1 | alias rule added under NEVER REBIND | 39/56 |
+| 2 | ban carved out + rationalisation answered | 53/56 |
+| 3 | alias moved out of the split recipe | **55/56** |
+
+Run 1 taught the lesson. The model READ the new rule and argued against it in
+its own Notes: "The starter code used lowercase variables (x, y, x_train,
+etc.); these were used directly as per the continuation rule." The alias rule
+had been written two lines under NEVER REBIND A NAME FROM THE FIRST LIST, and
+`X` is on that list - so the prompt said write `X = x` and never bind `X` in
+the same breath, and the older, louder rule won. CLAUDE.md rule 7 exactly:
+before adding a rung, grep for what already contradicts it.
+
+Run 2 fixed the contradiction (an alias binds a name that does not yet exist to
+an object that already exists - the opposite of rebinding) and answered the
+rationalisation by name. 39 -> 53. But the alias had been placed INSIDE the
+"split and scale" recipe, whose first four lines are read_csv and
+train_test_split, so the model ran the whole recipe: a rebuild, not an alias,
+and `# continues the notebook - uses: bank.csv` - a filename, which the prompt
+bans. Same shape of error as the one being fixed: an instruction placed where
+it could be read as licensing more than it meant.
+
+That executable alias line was also a REGRESSION WAITING TO HAPPEN on the main
+path: this model has transcribed recipe lines verbatim, and on an uppercase
+paper `X, X_train, X_test = x, x_train, x_test` is a NameError on `x`. Run 3
+moved it out of the recipe into prose that states the one line, says to start
+at `scaler =`, and says explicitly that the line does not exist when the
+starter already uses `X`.
+
+### The residual, and why it is not patched
+
+55/56. The one failure is "Q1 does not re-emit the starter code": block 1
+restates the loader and the split before aliasing.
+
+It fails ONLY on the L bank. Clean and typo both pass it. The difference is
+that the L bank's pasted starter is BROKEN - the student typed
+
+    y = df['y'].map({'no':0, 'yes': 1}0
+
+which is a SyntaxError, so their starter cell never ran. Re-emitting a
+corrected starter is arguably the right answer there, and the clean/typo
+contrast is decent evidence the model is reacting to the unrunnable starter
+rather than ignoring the rule. Hypothesis, not proof. Not patched: three
+patches this round each needed correcting, and a fourth on one occurrence of
+defensible behaviour is how prompts rot (rule 4).
+
+Student-facing consequence, added to DEPLOY_README: run your own starter cell
+and check it executes. The AI cannot see the notebook.

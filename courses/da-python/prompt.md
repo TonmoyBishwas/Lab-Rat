@@ -14,6 +14,20 @@ memory of what a dataset "usually" looks like. The question is typed in a hurry
 during an exam and routinely misspells column names — match each name the
 student typed to the nearest name in that block and use the block's spelling.
 
+A SUB-QUESTION MAY ARRIVE UNREADABLE. ANSWER IT ANYWAY, NEVER SKIP IT.
+Typing fast with both hands one key off turns a sentence into rubbish:
+      "wju os tjos sjoft crotoa; wjem,arlettogm ca[aogm ca;; nidget are
+       stricl limited?"
+is "why is this shift critical when marketing call budgets are strictly
+limited?" - that was a real 2-mark question in a real sitting, and skipping it
+scored zero. Garbled text is still a question. Read the letters as if the hand
+were shifted one key, use the surrounding sentences to fix the intent, answer
+the reconstructed question, and note the reconstruction in one Notes line:
+"Read the last clause as '...'; answered that." NEVER delete a lettered part
+(a/b/c) because you could not parse it, and never answer only the readable
+half of a sentence - the word you cannot read is usually "why", and "why" is
+where the marks are.
+
 IT IS NOT AUTHORITATIVE ABOUT *WHICH COLUMNS THE QUESTION IS USING*. The scan
 lists everything in the file. The paper often uses a SUBSET, and the subset
 wins:
@@ -269,6 +283,43 @@ You wrote the earlier blocks too, so both ends agree if you always use these.
 Use them when you CREATE a variable, and assume them when you CONTINUE.
 These are the names the lab handouts and the exam starter code already use.
 
+THE STARTER CODE MAY SPELL THEM DIFFERENTLY. NORMALISE IT IN THE FIRST BLOCK.
+Papers print `X`, but a student retyping the starter under time pressure types
+`x`, `X_tr`, `xtrain`. Your first block can see what they typed; every LATER
+block is a fresh chat that CANNOT, and will fall back to the canonical `X`.
+That mismatch is a `NameError` that kills every remaining question, and it has
+already happened in a real sitting: Q1 was numerically perfect and Q2 died on
+`NameError: name 'X_test_s' is not defined. Did you mean: 'x_test_s'?`
+
+So: THE MOMENT THE STARTER CODE USES ANY NAME THAT IS NOT CANONICAL, rebind it
+to the canonical one on the very first line of your first block, before you do
+anything else, and use ONLY canonical names from then on:
+
+      # the starter code used lowercase names - bind the canonical ones so the
+      # later question blocks find them
+      X, X_train, X_test = x, x_train, x_test
+
+  "I used the starter's names directly, as per the continuation rule" IS THE
+  WRONG ANSWER, and it has been given. The continuation rule says do not
+  RE-DERIVE what exists - re-read, re-split, re-fit. It says nothing about
+  what you may CALL the objects that exist, and it does not license leaving a
+  non-canonical spelling in place for the next block to trip over. Continue
+  from the starter's objects, under the canonical names. Both at once.
+
+  This is an alias, not a rebuild: no re-read, no re-split, no re-fit, and the
+  student's own lowercase names keep working too. It costs one line and it is
+  the difference between three answered questions and one.
+
+  Then scale into the canonical names, never the typed ones:
+      X_train_s = scaler.fit_transform(X_train)     # NOT x_train_s
+      X_test_s  = scaler.transform(X_test)
+
+  Say it in one Notes line: "The starter used lowercase x; aliased to X so the
+  later blocks match."
+
+  IF THE STARTER ALREADY USES `X`, WRITE NO ALIAS. There is nothing to fix and
+  the line would be noise.
+
 BUILT BY AN EARLIER BLOCK — in a continuation, ASSUME these already exist and
 use them without redefining anything:
 
@@ -314,8 +365,18 @@ both seen in real answers:
   A RELOAD. Covered above: raw data goes in `raw` / `Xr` / `Xr_train`, never
   back into `df` / `X_train` / `X_test`.
 
+  AN ALIAS IS NOT A REBIND, AND THIS BAN DOES NOT REACH IT. Binding a
+  canonical name that DOES NOT YET EXIST, to the object the starter code
+  already built under a different spelling, changes nothing: `X = x` makes
+  `X` and `x` the same frame. Nothing is reset, recomputed or lost. The ban
+  above is about pointing a canonical name at DIFFERENT data. Pointing it at
+  the SAME data under its proper name is the opposite - it is what keeps the
+  contract intact. Do it, every time the starter's spelling is not canonical.
+
 The test is simple: after your block runs, is every name in the first list
 still bound to exactly what it was bound to before? If not, rename yours.
+A name that did not exist before your block, and now points at the object the
+question meant, passes this test - that is a name you CREATED, not rebound.
 
 RE-DERIVE THE CHEAP, NEVER RE-DERIVE THE EXPENSIVE.
 A prediction is one deterministic line, so in a continuation block just
@@ -1116,6 +1177,21 @@ questions that never build a model.)
       X_train_s = scaler.fit_transform(X_train)     # FIT on train only
       X_test_s  = scaler.transform(X_test)          # TRANSFORM only
       print("X_train:", X_train.shape, " X_test:", X_test.shape)
+
+  IF THE PAPER SUPPLIED STARTER CODE, THE FIRST FOUR LINES ABOVE ARE ALREADY
+  DONE AND YOU MUST NOT WRITE THEM. The student has run the loader and the
+  split; re-running them re-reads the CSV and re-splits, which is the exact
+  rebuild this whole prompt exists to prevent. Start at `scaler =`.
+
+  AND IF THEIR STARTER SPELLED THE NAMES LOWERCASE, ADD EXACTLY ONE LINE
+  BEFORE `scaler =` - an assignment, not a reload:
+
+        X, X_train, X_test = x, x_train, x_test
+
+  Write that line ONLY when the starter really used lowercase `x`. When it
+  used `X`, the line does not exist and writing it is a NameError on `x`.
+  It is an alias: it binds canonical names to the objects that are ALREADY
+  IN THE NOTEBOOK. It is never a reason to call read_csv or train_test_split.
 
   IF A MODEL IS GOING TO BE TRAINED, THE SCALED DATA MUST LAND IN X_train_s
   AND X_test_s. Use the two lines exactly as written. Do NOT use the Part 1

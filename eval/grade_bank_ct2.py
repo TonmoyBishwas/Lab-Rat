@@ -76,6 +76,16 @@ X_train, X_test, y_train, y_test = train_test_split(
 print("Data ready:", X_train.shape, X_test.shape)
 """
 
+# The SAME starter, typed the way the student actually typed it: lowercase x.
+# Their own cell runs fine; what breaks is that question blocks 2 and 3 are
+# fresh chats that never saw it. The model's first block must alias x -> X.
+STARTER_LOWER = STARTER.replace("X = df[features]", "x = df[features]").replace(
+    "X_train, X_test, y_train, y_test", "x_train, x_test, y_train, y_test").replace(
+    "    X, y, test_size", "    x, y, test_size").replace(
+    'print("Data ready:", X_train.shape, X_test.shape)',
+    'print("Data ready:", x_train.shape, x_test.shape)')
+assert "x = df[features]" in STARTER_LOWER and "X = df[features]" not in STARTER_LOWER
+
 PROBE = r'''
 # ---- grader probe (appended, not model-written) ----
 import json as _json, numpy as _np
@@ -155,12 +165,22 @@ def load_bank():
     # Keep the printed question label - see the note in grade_titanic_mldl.py.
     # The typo bank is the student's own typing, where the label is lowercase
     # and often the only thing tying a block to the previous one.
+    # The lowercase-starter bank: the student's verbatim typing, starter code
+    # included, with x instead of X. Comments in the .md are stripped.
+    low = re.findall(r"^## (L\d)\n(.*?)(?=^## L\d|\n---\n|\Z)", txt, re.S | re.M)
+    low = [(l, re.sub(r"<!--.*?-->", "", b, flags=re.S).strip()) for l, b in low]
     return ([f"{lbl}. {b.strip()}" for lbl, b in clean],
-            [f"{lbl.lower().replace('t', 'q')}. {b.strip()}" for lbl, b in typo])
+            [f"{lbl.lower().replace('t', 'q')}. {b.strip()}" for lbl, b in typo],
+            [f"{lbl.lower().replace('l', 'q')}. {b.strip()}" for lbl, b in low])
 
 
 def sys_prompt():
     p = open(os.path.join(ROOT, "courses", "da-python", "prompt.md"), encoding="utf-8").read().strip()
+    if os.environ.get("LABRAT_NO_SCAN"):
+        # LABRAT_NO_SCAN=1 reproduces a student who never filled the Dataset
+        # box: prompt only, no column names, no values, no delimiter.
+        print("  [no dataset block - simulating an empty Dataset box]")
+        return p
     scan = dataset_scan.scan(dataset_scan.resolve("bank", ROOT))
     # Same order the UI uses: stable prompt first, dataset block appended last.
     return p + "\n\n" + scan["text"] if scan["ok"] else p
@@ -297,8 +317,9 @@ def run_code(code, tag):
     return r, data
 
 
-def grade(answers, tag):
+def grade(answers, tag, starter=None):
     """answers: the three block answers, in paper order."""
+    starter = STARTER if starter is None else starter
     checks = []
 
     def chk(name, ok, detail=""):
@@ -426,7 +447,7 @@ def grade(answers, tag):
         and re.search(r"predict_proba\(\s*new_client", c3), "")
 
     # ---- 6. IT HAS TO RUN ----------------------------------------------
-    r, probe = run_code(STARTER + "\n" + allc, tag)
+    r, probe = run_code(starter + "\n" + allc, tag)
     out = r.stdout
     chk("the whole notebook executes", r.returncode == 0,
         (r.stderr.strip().splitlines() or ["?"])[-1])
@@ -521,11 +542,13 @@ def regrade(path):
     txt = open(path, encoding="utf-8").read()
     answers = [s for s in re.split(r"\n\n---\n\n", txt) if s.strip()]
     tag = "regrade-" + os.path.basename(path).replace(".md", "")
-    c, probe, out = grade(answers, tag[:40])
+    # a saved "lower" log must be re-scored against the lowercase starter
+    st = STARTER_LOWER if "-lower" in os.path.basename(path) else STARTER
+    c, probe, out = grade(answers, tag[:40], st)
     report(os.path.basename(path), c)
 
 
-def run_mode(name, blocks, sp, stamp, runs):
+def run_mode(name, blocks, sp, stamp, runs, starter=None):
     """Every block is a FRESH chat - the previous answers are NOT in context."""
     print(f"\n[{name}] three blocks, each in a brand-new empty chat ...", flush=True)
     answers = []
@@ -537,7 +560,7 @@ def run_mode(name, blocks, sp, stamp, runs):
               f"{len(blocks_of(a))} code block(s)", flush=True)
     open(os.path.join(runs, f"{stamp}-bank-{name}.md"), "w", encoding="utf-8").write(
         "\n\n---\n\n".join(answers))
-    c, probe, out = grade(answers, name)
+    c, probe, out = grade(answers, name, starter)
     open(os.path.join(WD, f"{name}_stdout.txt"), "w", encoding="utf-8").write(out)
     return report(f"{name.upper()} (3 fresh chats)", c)
 
@@ -547,10 +570,10 @@ def main():
     if mode == "regrade":
         regrade(sys.argv[2])
         return
-    clean, typo = load_bank()
+    clean, typo, low = load_bank()
     sp = sys_prompt()
     print(f"system prompt: {len(sp)} chars (~{len(sp)//4} tokens, incl. dataset block)")
-    print(f"blocks: clean={len(clean)} typo={len(typo)}")
+    print(f"blocks: clean={len(clean)} typo={len(typo)} lower={len(low)}")
     stamp = time.strftime("%Y%m%d-%H%M%S")
     runs = os.path.join(ROOT, "courses", "da-python", "evals", "runs")
     os.makedirs(runs, exist_ok=True)
@@ -559,6 +582,11 @@ def main():
         totals.append(("CLEAN (paper as printed)",) + run_mode("clean", clean, sp, stamp, runs))
     if mode in ("both", "typo"):
         totals.append(("TYPO (as actually typed)",) + run_mode("typo", typo, sp, stamp, runs))
+    if mode in ("both", "lower"):
+        # the starter code the student typed binds lowercase x - block 1 must
+        # alias it to X or blocks 2 and 3 die with NameError
+        totals.append(("LOWERCASE STARTER (x not X)",)
+                      + run_mode("lower", low, sp, stamp, runs, STARTER_LOWER))
     print("\n" + "=" * 50)
     for name, n, tot in totals:
         print(f"  {name.ljust(28)} {n}/{tot}")

@@ -66,6 +66,10 @@ eval/grade_bank_ct2.py   The THIRD real paper, and the first from the NEW
                          Bank: courses/da-python/evals/class_test_3_bank.md
                          Truth: eval/ref_bank_ct2.py (regenerates the key)
                          Port override: LABRAT_AI_PORT.
+                         Modes: clean | typo | lower. 'lower' feeds the
+                         STUDENT'S OWN verbatim capture (## L1-L3), whose
+                         starter code binds lowercase x - the case that broke
+                         the canonical-name contract. See lesson 27.
 eval/grade_titanic_mldl.py  The GENERALIZATION bank — NOT a real sitting.
                          Written from the Part 3/4 handouts to answer "is the
                          prompt tuned to the bank paper or to the syllabus?".
@@ -243,6 +247,37 @@ months of eval rounds:
    positives rise where the tuned-on paper's 0.65 made them fall). It found
    four real bugs the real paper structurally could not - including 24 above.
    A bank that shares a blind spot with the prompt cannot detect it.
+
+27. **THE STUDENT RETYPES THE STARTER CODE, AND ONE CHARACTER OF CASE BREAKS
+   THE WHOLE CONTRACT.** The student hand-typed the other section's paper at
+   exam speed and typed `x = df[features]` where the paper prints `X`. Block 1
+   followed their lowercase and was numerically PERFECT - 0.8862 / 0.8729 /
+   0.8762 / loss 0.2034, every figure matching the reference key exactly.
+   Blocks 2 and 3 are fresh chats that never saw block 1, fell back to the
+   canonical `X`, and the notebook died on `NameError: name 'X_test_s' is not
+   defined. Did you mean: 'x_test_s'?`. Regraded: **40/56**, of which ELEVEN
+   failures were one cascade (lesson 25 again).
+   Neither existing bank could find it: the clean bank AND the typo bank both
+   feed the paper's printed uppercase X, so the harness agreed with the prompt
+   by construction. The canonical-name contract (lesson 16) silently assumes
+   the student transcribes names exactly - and the one thing a rushed student
+   does NOT do is transcribe exactly. Fix: **block 1 must ALIAS whatever was
+   typed to the canon** (`X, X_train, X_test = x, x_train, x_test`) before
+   anything else - one line, no re-read, no re-split, no re-fit. Bank:
+   `## L1-L3` in class_test_3_bank.md, the student's verbatim capture, run with
+   `python eval\grade_bank_ct2.py lower`.
+   Generalisation: **when a contract spans two contexts, test it with the two
+   contexts DISAGREEING.** A harness that feeds both ends the same spelling can
+   only ever confirm the contract.
+28. **A GARBLED SUB-QUESTION IS STILL A SUB-QUESTION.** In the same capture
+   Q3(b) ended `wju os tjos sjoft crotoa; wjem,arlettogm ca[aogm ca;; nidget
+   are stricl limited?` - a whole-hand-one-key-shifted "why is this shift
+   critical when marketing call budgets are strictly limited?". The model
+   answered the readable half and dropped the 2-mark "why" entirely. Real
+   student typing degrades far past column-name misspelling, which was all the
+   prompt's typo tolerance covered. The word that gets mangled is
+   disproportionately the *reasoning* word, because it sits at the end of the
+   sentence where hands have drifted furthest.
 
 ## Models (July 2026 state)
 

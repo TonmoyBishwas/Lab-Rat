@@ -91,6 +91,36 @@ HOW TO ASK
   earlier cells built rather than start over. That "start over" behaviour is
   what wrecked the last Class Test.
 
+  IF THE PAPER GIVES STARTER CODE, TYPE ITS VARIABLE NAMES EXACTLY AS PRINTED.
+  Capital X is capital X. If the paper says
+
+      X = df[features].copy()
+      X_train, X_test, y_train, y_test = train_test_split(...)
+
+  do not type x, x_train, x_test. Your Q1 answer will follow whatever you
+  typed and still be correct - but Q2 and Q3 are written in fresh tabs that
+  cannot see Q1, so they use the standard capital-X names, and your notebook
+  stops with
+
+      NameError: name 'X_test_s' is not defined. Did you mean: 'x_test_s'?
+
+  This happened in a real practice run: Q1 was perfect to four decimal places
+  and the rest of the paper would not run. Two seconds of care here.
+
+  IF YOU ALREADY TYPED IT LOWERCASE, DO NOT RETYPE ANYTHING. Paste this one
+  line into a new cell and run it, and everything works again:
+
+      X, y, X_train, X_test = x, y, x_train, x_test
+      X_train_s, X_test_s = x_train_s, x_test_s
+
+  (The AI is now told to add that line for you when it sees a lowercase
+  starter - this is your backup if it forgets.)
+
+  RUN YOUR STARTER CELL AND CHECK IT ACTUALLY EXECUTES before you build on it.
+  In a practice run the typed starter ended `.map({'no':0, 'yes': 1}0` - a
+  SyntaxError, so that cell never ran. The AI cannot see your notebook and will
+  happily build three answers on top of a cell that failed.
+
   IF THE PAPER GIVES STARTER CODE, RUN IT YOURSELF FIRST. Copy the starter
   block straight from the paper into your notebook and run it. Do not ask
   the AI to write it - it already knows that code exists and will start from

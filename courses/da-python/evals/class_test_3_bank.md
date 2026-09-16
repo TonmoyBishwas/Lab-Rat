@@ -216,3 +216,72 @@ THE DIRECTION IN Q3(b) IS ARITHMETIC, NOT LUCK: raising the threshold above 0.5
 demands more confidence before predicting Class 1, so fewer positives are
 predicted — FP must fall and FN must rise. An answer claiming the opposite is
 wrong regardless of the split.
+
+
+---
+
+## L1
+
+<!--
+THE LOWERCASE-STARTER BANK. Captured 2026-09-16 from the student typing the
+other section's paper by hand, at exam speed, with their own spelling. It is
+NOT a third paper - it is the SAME paper as Q1-Q3, retyped.
+
+Its whole reason to exist is one character: the printed paper says `X = df[...]`
+and a student under time pressure types `x`. Block 1 can see that; blocks 2 and
+3 are fresh chats that cannot, and fall back to the canonical `X`. The first
+capture ran Q1 to four exactly-correct figures and then died on
+`NameError: name 'X_test_s' is not defined. Did you mean: 'x_test_s'?`
+
+Neither the clean bank nor the typo bank could find this: both feed the
+paper's printed uppercase X. Run this mode with:  python eval\grade_bank_ct2.py lower
+-->
+
+the bank dataset contains 4521 phone records from a portuguese bank to predict whether a clinet subscribes toa long term deposit (y = 1) or declines (y = 0). the numerical attributes capture client demographics account balances and call campaign interactions across widely different scales. because only equavelnt of 11.5% of contacs subcribed the target is heavily imbalanced, requiring feature standardization and diagnostic metrics beyond simple accuracy.
+starter code that is given:
+import numpy, pandast, matplotlib seabord sklearn etc as their default alisas
+
+df = pd.read_csv('bank.csv', sep = ';')
+features = ['age', 'balance', 'day', 'duration', 'campaign', 'pdays', 'previous']
+x =df[features].copy()
+
+y = df['y'].map({'no':0, 'yes': 1}0
+
+x_train,  x_test, y_train, y_test = train_test_split( x,y, test_size=0.2, random_state=42, stratify=y)
+
+
+
+Q1)
+a) standardize the conitnous feature space using standardscaler. ensure the scaler is fit strictly on x_train and then applied to transform both x_train and x_test to avoid data leakage.
+
+b) fit both baseline logisticregression(max_iter=1000) and random forest classcifier (n_estimators=100, random_state=42) on the scaled training features. compute and display their respective test set accuancies.
+
+c) initializie and train and MLPClassifier with two hidden layers of size (32,16) , activation = 'relu', solver = 'adam', max_itar=500, and random_state=42. report its test accuracy and print its final coverance training loss via the .loss via the .loss_attribute.
+
+## L2
+
+q2) 
+a)generate and visualize confusion matrix for your trained MLP classifier using a seaborn heatmap with axis tick labels ['No Deposit', 'Subscribed'].
+b) print the full classification report for the MLPClassfier.
+c) Plot the networks learnign trajectory across epochs usign the .loss_curve_attribute. Include clear axis labels and a title.
+
+## L3
+
+q3) 
+a)extract the feature important from your trained RandomForestClassifier and list the top 2 most influential features. Then, encapsulate StandardScaler and RanDomForestClassfifier into a scikit-learn Pipeline and report the Mean and Standard Deviationof a 5 fold-stratified cross validation accuracty score.
+
+b) In default scikit-learn classifiers,. predi(0 assigns a simple to class1 whenever its predicted probability is >= 0.5. In high cost marketing or risk analysis you cna shift this decision threshold manually using probabilyt from .predict_proba():
+#methodology: custom decision boundary
+probs_class1 = model.predict_proba(x_test_s)[:, 1]
+y_pred_custom = (probs_class1 >= T).astype(int)
+
+- appply tehcnique above to your trained MLPClassififer on x_test_s with a strict threshold of T = 0.65.
+-compute and display the new confusion matrix using confusino_matrix(y_test, y_pred_custom).
+-compare this matrix againt your default matrix from q2(a). what will happend to the ocunt of false positives (clinets predicted to subcre the actua ly did not?) wju os tjos sjoft crotoa; wjem,arlettogm ca[aogm ca;; nidget are stricl limited?
+
+c) bundle standardscaler and an mlp classfifier(hidden_layers_sizes=(32,16), activation= 'relu", solver = 'adam', max_iter=500, random_state=42) into a single pipeline object and fit it on x_train and y_train. construct the followign syntehci clinet datafram:
+new_clinet = pd.DataFrame([{
+    'age':41, 'balance': 24143, 'day':5, 'duration': 261,
+    'campaign': 1, 'pdays': -1, 'previous': 0
+}])
+pass new_clinet directly into your fitted pipeline to print its predicted class label and predicted subscription probailty via .predict_proba(0 without manual preprocessing.
