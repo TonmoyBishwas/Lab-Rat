@@ -246,16 +246,61 @@ class UIHandler(BaseHTTPRequestHandler):
             self.send_json(404, {"error": "not found"})
 
 
-def kill_port(port):
+def port_owner(port):
+    """Return (pid, process_name) for whatever is LISTENING on port, or None."""
     try:
-        out = subprocess.check_output(['netstat', '-aon'], text=True, stderr=subprocess.DEVNULL)
-        for line in out.splitlines():
-            if f':{port} ' in line and 'LISTENING' in line:
-                pid = line.split()[-1]
-                subprocess.run(['taskkill', '/F', '/PID', pid],
-                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except:
-        pass
+        out = subprocess.check_output(['netstat', '-aon'], text=True,
+                                      stderr=subprocess.DEVNULL)
+    except Exception:
+        return None
+    for line in out.splitlines():
+        parts = line.split()
+        # TCP  127.0.0.1:11434  0.0.0.0:0  LISTENING  1752
+        if len(parts) >= 5 and parts[3] == 'LISTENING' and parts[1].endswith(f':{port}'):
+            pid = parts[4]
+            name = ''
+            try:
+                tl = subprocess.check_output(
+                    ['tasklist', '/FI', f'PID eq {pid}', '/FO', 'CSV', '/NH'],
+                    text=True, stderr=subprocess.DEVNULL)
+                name = tl.split(',')[0].strip('" \r\n')
+            except Exception:
+                pass
+            return pid, name
+    return None
+
+
+def kill_port(port):
+    """Free the port ONLY if we are the ones squatting on it.
+
+    This used to kill whatever it found. On a dev box that means killing the
+    user's Ollama, which also listens on 11434 by default - rude, and it fails
+    anyway when the process cannot be terminated, leaving llama-server unable
+    to bind and the launcher showing a bare timeout. Now we reclaim our own
+    stale server and otherwise leave the machine alone; run() moves to a free
+    port instead.
+    """
+    own = port_owner(port)
+    if not own:
+        return True                       # nothing there, port is ours
+    pid, name = own
+    if 'llama-server' not in name.lower():
+        return False                      # someone else's - do not touch it
+    subprocess.run(['taskkill', '/F', '/PID', pid],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    for _ in range(20):                   # wait for the socket to actually free
+        if not port_owner(port):
+            return True
+        time.sleep(0.25)
+    return not port_owner(port)
+
+
+def free_port_from(start, limit=20):
+    """First port at or after `start` that nothing is listening on."""
+    for p in range(start, start + limit):
+        if not port_owner(p):
+            return p
+    return start
 
 def find_model(preferred=None):
     """preferred: optional per-course filename list tried before the global priority."""
@@ -353,8 +398,21 @@ def run():
 
     ctx = CTX_FOR.get(model_name, 8192)
     COURSE["model"] = model_name
-    kill_port(AI_PORT)
-    kill_port(UI_PORT)
+
+    # Reclaim our own stale servers; step around anything else (Ollama also
+    # defaults to 11434). The proxy and the health check both read these
+    # globals at call time, so moving them here is enough.
+    global AI_PORT, UI_PORT
+    for label, want, setter in (("AI", AI_PORT, "AI"), ("UI", UI_PORT, "UI")):
+        if not kill_port(want):
+            owner = port_owner(want)
+            got = free_port_from(want + 1)
+            who = f"{owner[1]} (pid {owner[0]})" if owner else "another program"
+            print(f"  Port {want} is in use by {who} - using {got} instead.")
+            if setter == "AI":
+                AI_PORT = got
+            else:
+                UI_PORT = got
 
     print(f"  Course:  {course_id}")
     print(f"  Model:   {model_name}")
